@@ -1,0 +1,32 @@
+# Dependencias
+node_modules/
+
+# Variaveis de ambiente e segredos (Artigo II.2)
+.env
+.env.local
+.env.*.local
+
+# Build
+dist/
+build/
+web/dist/
+
+# Backups de banco (Artigo VII.5)
+db/backups/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Documentacao e Especificacoes
+.specify/
+specs/
