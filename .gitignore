@@ -1,32 +1,90 @@
+# =====================================================================
+# NoStock — repositorio de CODIGO
+#
+# Nada de segredo, dependencia, build ou dump de banco entra aqui
+# (Artigo II.2 e Artigo VII.5 da constituicao).
+# =====================================================================
+
 # Dependencias
 node_modules/
+.pnp
+.pnp.js
 
 # Variaveis de ambiente e segredos (Artigo II.2)
+# .env.example E versionado; .env NUNCA.
 .env
 .env.local
 .env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Build
 dist/
 build/
 web/dist/
+*.tsbuildinfo
 
-# Backups de banco (Artigo VII.5)
+# Backups e dumps de banco (Artigo VII.5)
 db/backups/
+*.sql.gz
+*.dump
+
+# Testes e cobertura
+coverage/
+.nyc_output/
+*.lcov
 
 # Logs
+logs/
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Cache de ferramentas
+.vite/
+.cache/
+.eslintcache
 
 # Sistema operacional
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Editores
 .vscode/*
 !.vscode/extensions.json
 .idea/
+*.swp
+*~
 
-# Documentacao e Especificacoes
-.specify/
+# =====================================================================
+# Especificacao — mora no OUTRO repositorio (joaoparanhoss/nostock)
+#
+# Quem seguiu o passo a passo do README da spec tem estas pastas na
+# maquina como referencia de leitura. Elas nao sobem aqui.
+# =====================================================================
 specs/
+.specify/
+.claude/
+
+# =====================================================================
+# Markdown na RAIZ: so o README sobe.
+#
+# Pega qualquer .md solto na raiz -- anotacao, rascunho, o CONTRIBUTING.md
+# que a equipe decidiu manter local, ou um README.md da spec copiado por
+# engano com outro nome.
+#
+# ATENCAO: a regra vale SO para a raiz, de proposito. Estes PRECISAM ser
+# versionados e continuam livres:
+#   .github/pull_request_template.md   (T003 -- sem isso o template nao funciona)
+#   docs/manual-de-uso.md              (T085)
+#   docs/roteiro-de-testes.md          (T078)
+#   docs/adr/*.md                      (constituicao: mudanca de artigo exige ADR)
+# Nunca troque as duas linhas abaixo por "*.md": o arquivo sumiria do
+# git status e a pessoa acharia que commitou.
+# =====================================================================
+/*.md
+!/README.md
