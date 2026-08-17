@@ -1,10 +1,3 @@
-# =====================================================================
-# NoStock — repositorio de CODIGO
-#
-# Nada de segredo, dependencia, build ou dump de banco entra aqui
-# (Artigo II.2 e Artigo VII.5 da constituicao).
-# =====================================================================
-
 # Dependencias
 node_modules/
 .pnp
@@ -60,31 +53,9 @@ desktop.ini
 *.swp
 *~
 
-# =====================================================================
-# Especificacao — mora no OUTRO repositorio (joaoparanhoss/nostock)
-#
-# Quem seguiu o passo a passo do README da spec tem estas pastas na
-# maquina como referencia de leitura. Elas nao sobem aqui.
-# =====================================================================
 specs/
 .specify/
 .claude/
 
-# =====================================================================
-# Markdown na RAIZ: so o README sobe.
-#
-# Pega qualquer .md solto na raiz -- anotacao, rascunho, o CONTRIBUTING.md
-# que a equipe decidiu manter local, ou um README.md da spec copiado por
-# engano com outro nome.
-#
-# ATENCAO: a regra vale SO para a raiz, de proposito. Estes PRECISAM ser
-# versionados e continuam livres:
-#   .github/pull_request_template.md   (T003 -- sem isso o template nao funciona)
-#   docs/manual-de-uso.md              (T085)
-#   docs/roteiro-de-testes.md          (T078)
-#   docs/adr/*.md                      (constituicao: mudanca de artigo exige ADR)
-# Nunca troque as duas linhas abaixo por "*.md": o arquivo sumiria do
-# git status e a pessoa acharia que commitou.
-# =====================================================================
 /*.md
 !/README.md
