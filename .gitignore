@@ -61,10 +61,10 @@ desktop.ini
 *~
 
 # =====================================================================
-# Especificacao — mora no OUTRO repositorio (joaoparanhoss/nostock)
+# Documentacao da especificacao — nao e versionada aqui.
 #
-# Quem seguiu o passo a passo do README da spec tem estas pastas na
-# maquina como referencia de leitura. Elas nao sobem aqui.
+# Quem tem estas pastas na maquina as usa como referencia de leitura;
+# elas nao entram em commit nenhum deste repositorio.
 # =====================================================================
 specs/
 .specify/
@@ -74,8 +74,8 @@ specs/
 # Markdown na RAIZ: so o README sobe.
 #
 # Pega qualquer .md solto na raiz -- anotacao, rascunho, o CONTRIBUTING.md
-# que a equipe decidiu manter local, ou um README.md da spec copiado por
-# engano com outro nome.
+# que a equipe decidiu manter local, ou documentacao copiada por engano
+# para dentro do projeto.
 #
 # ATENCAO: a regra vale SO para a raiz, de proposito. Estes PRECISAM ser
 # versionados e continuam livres:
