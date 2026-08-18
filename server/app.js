@@ -9,6 +9,7 @@ import helmet from 'helmet'
 import { obterEnv } from './config/env.js'
 import { bancoResponde } from './db/pool.js'
 import { errorHandler } from './middlewares/errorHandler.js'
+import { rotas as categorias } from './modules/categorias/routes.js'
 import { AppError } from './shared/AppError.js'
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -34,6 +35,8 @@ export function criarApp() {
       dados: { status: 'ok', banco, versao },
     })
   })
+
+  app.use('/api/categorias', categorias)
 
   app.use('/api', (_req, _res, next) => {
     next(new AppError('NAO_ENCONTRADO', 'Rota inexistente.'))

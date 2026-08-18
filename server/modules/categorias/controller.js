@@ -1,0 +1,23 @@
+import * as servico from './service.js'
+
+// Traduz HTTP para o dominio e de volta. Nenhuma regra mora aqui.
+export async function listar(req, res) {
+  res.json({ dados: await servico.listar(req.validado.query) })
+}
+
+export async function buscarPorId(req, res) {
+  res.json({ dados: await servico.buscarPorId(req.validado.params.id) })
+}
+
+export async function criar(req, res) {
+  res.status(201).json({ dados: await servico.criar(req.validado.body) })
+}
+
+export async function atualizar(req, res) {
+  res.json({ dados: await servico.atualizar(req.validado.params.id, req.validado.body) })
+}
+
+export async function inativar(req, res) {
+  await servico.inativar(req.validado.params.id)
+  res.status(204).end()
+}
