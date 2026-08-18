@@ -18,5 +18,15 @@ jobs:
         run: npm install
       - name: Run lint
         run: npm run lint --if-present
+      - name: Conferir se o banco esta configurado
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::warning::DATABASE_URL ausente nos secrets — os testes de integracao vao ser pulados."
+          fi
+
       - name: Run tests
-        run: npm test --if-present
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm test
