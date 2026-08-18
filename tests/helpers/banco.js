@@ -49,11 +49,24 @@ export async function abrirTransacao() {
   return cliente
 }
 
+// Falha aqui nao pode virar o erro do teste: se a conexao ja caiu, o motivo
+// verdadeiro esta na falha original, nao no rollback que veio depois.
 export async function desfazerTransacao() {
   definirPool(null)
   if (!cliente) return
 
-  await cliente.query('rollback')
-  await cliente.end()
+  const atual = cliente
   cliente = null
+
+  try {
+    await atual.query('rollback')
+  } catch {
+    // conexao ja perdida: nao ha o que desfazer
+  }
+
+  try {
+    await atual.end()
+  } catch {
+    // idem
+  }
 }
