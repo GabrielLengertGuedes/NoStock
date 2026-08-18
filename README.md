@@ -11,48 +11,152 @@ Projeto extensionista do curso de Engenharia de Software, Centro Universitário 
 
 Aplicação web para substituir o controle de estoque em planilhas e cadernos: cadastro de produtos, registro de entradas e saídas com responsável e horário, alerta de itens abaixo do mínimo, dashboard, relatórios e sugestão de compra por fornecedor.
 
-- **Front-end:** React 18 + Vite (SPA)
+- **Front-end:** React + Vite (SPA)
 - **Back-end:** Node.js 20 + Express (API REST)
-- **Banco:** MySQL 8
+- **Banco:** PostgreSQL (Supabase)
 
-## Instalação e Uso
+---
 
-Para executar o projeto localmente, siga os passos abaixo:
+## Como rodar na sua máquina
 
-### Pré-requisitos
-- **Node.js** v20 ou superior
-- **MySQL** 8.0+ (Pode ser instalado via instalador oficial, XAMPP ou Docker)
+São quatro passos e levam cerca de cinco minutos. Você **não** precisa instalar banco de dados,
+nem Docker: o banco já existe, na nuvem, e é o mesmo para a equipe inteira.
 
-### Passo a passo
+### Antes de começar
 
-1. **Clone o repositório:**
-   ```bash
-   git clone https://github.com/GabrielLengertGuedes/NoStock.git
-   cd NoStock
-   ```
+| O que | Como conferir | Onde pegar |
+|---|---|---|
+| **Node.js 20 ou superior** | `node -v` mostra `v20` ou maior | [nodejs.org](https://nodejs.org) — baixe a versão LTS |
+| **Git** | `git --version` responde | [git-scm.com](https://git-scm.com) |
+| **A `DATABASE_URL` do projeto** | — | No cofre da equipe. Peça a quem cuida da infraestrutura |
 
-2. **Instale as dependências:**
-   ```bash
-   npm install
-   ```
+> A `DATABASE_URL` é uma senha e não pode ser publicada em lugar nenhum.
 
-3. **Configure as variáveis de ambiente:**
-   Copie o arquivo de exemplo e edite com suas credenciais do banco de dados (o arquivo `.env.example` será adicionado em breve):
-   ```bash
-   cp .env.example .env
-   ```
+### 1. Baixe o projeto
 
-4. **Prepare o banco de dados:**
-   Crie o schema e insira os dados iniciais:
-   ```bash
-   npm run db:setup
-   ```
+```bash
+git clone https://github.com/GabrielLengertGuedes/NoStock.git
+cd NoStock
+```
 
-5. **Inicie o servidor de desenvolvimento:**
-   ```bash
-   npm run dev
-   ```
+### 2. Instale as dependências
 
-### Problemas Comuns
-- **Erro de conexão com o MySQL:** Verifique se as variáveis `DB_HOST`, `DB_USER` e `DB_PASS` no `.env` correspondem à sua instalação.
-- **Porta em uso:** Se a porta padrão (3000) estiver em uso, altere `PORT` no `.env`.
+```bash
+npm install
+```
+
+Roda uma vez só. Depois disso, só quando alguém adicionar uma biblioteca nova.
+
+### 3. Crie o seu arquivo `.env`
+
+O repositório traz um `.env.example` com todas as variáveis e um comentário explicando cada uma.
+Copie e edite o **seu** `.env` — ele fica só na sua máquina e nunca é enviado para o GitHub.
+
+```bash
+cp .env.example .env      # Windows (PowerShell): copy .env.example .env
+```
+
+Abra o `.env` no editor e preencha as duas obrigatórias:
+
+- **`DATABASE_URL`** — cole exatamente a string que você pegou no cofre.
+- **`SESSION_SECRET`** — qualquer sequência aleatória longa, inventada por você.
+  Não precisa combinar com a de ninguém.
+
+As outras já vêm preenchidas com o valor certo para desenvolvimento. Não mexa nelas.
+
+### 4. Suba o projeto
+
+```bash
+npm run dev
+```
+
+Sobem duas coisas ao mesmo tempo, em painéis coloridos no terminal:
+
+- **`web`** — o site, em <http://localhost:5173>
+- **`api`** — a API, em <http://localhost:3001>
+
+Abra o endereço do `web` no navegador. Para parar tudo, `Ctrl+C` no terminal.
+
+---
+
+## Comandos
+
+| Comando | O que faz |
+|---|---|
+| `npm install` | Instala tudo |
+| `npm run dev` | Sobe a API e o site juntos |
+| `npm test` | Roda os testes |
+| `npm run backup` | Gera uma cópia do banco em `db/backups/` |
+| `npm run lint` | Aponta erros de padrão no código |
+
+Se precisar subir só um lado, existem `npm run dev:api` e `npm run dev:web`.
+
+**Não existe comando que crie, apague ou recarregue o banco — de propósito.** O banco é um só e
+é compartilhado: um comando desses apagaria o trabalho de cinco pessoas. Mudança na estrutura do
+banco entra como arquivo novo em `db/migrations/`, aplicado à mão e avisado no grupo.
+
+---
+
+## Quando algo dá errado
+
+### `node: command not found`, ou `node -v` mostra uma versão menor que 20
+
+O Node não está instalado, ou está desatualizado. Instale a versão LTS pelo
+[nodejs.org](https://nodejs.org), **feche e abra o terminal** e confira de novo com `node -v`.
+Fechar o terminal é o passo que a maioria esquece.
+
+### `cp: command not found` no Windows
+
+O `cp` é comando de Mac e Linux. No PowerShell use `copy .env.example .env`, ou copie e cole o
+arquivo pelo Explorador de Arquivos mesmo, renomeando a cópia para `.env`.
+
+### O `.env` não aparece na pasta
+
+Arquivos que começam com ponto ficam escondidos. No Windows, marque **Itens ocultos** na aba
+Exibir; no Mac, `Cmd + Shift + .` no Finder. Pelo editor de código ele aparece normalmente.
+
+### A API sobe e cai avisando que falta uma variável
+
+É a mensagem funcionando como deveria: a API se recusa a subir pela metade. Ela diz o nome da
+variável que faltou — abra o `.env` e preencha. O erro mais comum é o `SESSION_SECRET` em
+branco, porque o `.env.example` vem sem valor de propósito.
+
+### Erro de conexão com o banco
+
+Quase sempre é a `DATABASE_URL` colada errado. Confira:
+
+- se veio inteira, sem espaço nem quebra de linha no meio;
+- se não sobrou aspas nas pontas;
+- se a senha tem `@`, `#` ou `/`, esses caracteres precisam vir codificados na string — peça a
+  versão já pronta a quem cuida da infraestrutura em vez de montar na mão.
+
+Se ainda assim não conecta, teste a sua internet e confirme no grupo se o banco está no ar.
+
+### `Port 5173 is already in use` (ou 3001)
+
+Já tem uma cópia do projeto rodando em outro terminal. Feche-a com `Ctrl+C`. Se não achar,
+feche todos os terminais e comece de novo.
+
+### O painel `api` mostra `Cannot find module ... server/index.js`
+
+A API ainda não foi escrita — está numa tarefa em aberto. O site sobe normalmente e você pode
+trabalhar no front. Assim que o arquivo existir, a API inicia sozinha, sem precisar reiniciar
+o `npm run dev`.
+
+### `pg_dump não encontrado` no `npm run backup`
+
+O backup usa uma ferramenta que vem junto com o PostgreSQL. Instale o
+[cliente do PostgreSQL](https://www.postgresql.org/download/) e tente de novo. Só quem cuida do
+backup precisa disso — para desenvolver, não é necessário.
+
+### Nada disso resolveu
+
+Apague a pasta de dependências e reinstale:
+
+```bash
+rm -rf node_modules        # Windows (PowerShell): Remove-Item -Recurse -Force node_modules
+npm install
+```
+
+Se continuar, mande no grupo **a mensagem de erro inteira**, copiada do terminal. Print cortado
+no "erro" não diz nada; a linha útil costuma estar três linhas abaixo.
