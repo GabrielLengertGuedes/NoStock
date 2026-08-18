@@ -1,0 +1,181 @@
+/* Layout */
+.layout-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-base);
+  background-color: var(--white);
+  border-bottom: 1px solid var(--stone);
+}
+
+.layout-marca { color: var(--primary-dark); }
+
+.layout-conteudo { padding-block: var(--spacing-base); }
+
+.layout-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-base);
+}
+
+.nav-item-ativo {
+  opacity: 1;
+  font-weight: 600;
+}
+
+/* Tabela */
+.tabela-rolagem {
+  overflow-x: auto;
+  background-color: var(--white);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stone);
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.tabela th,
+.tabela td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--stone);
+  white-space: nowrap;
+}
+
+.tabela th {
+  font-weight: 600;
+  color: var(--slate);
+  background-color: var(--cream);
+}
+
+.tabela tbody tr:last-child td { border-bottom: none; }
+.tabela tbody tr:hover { background-color: var(--accent-pale); }
+
+/* Status de estoque: cor + rotulo, e SEM_ESTOQUE solido para nao se confundir
+   com CRITICO quando a cor nao for percebida. */
+.badge-status-normal {
+  background-color: var(--accent-light);
+  color: var(--primary-medium);
+}
+
+.badge-status-baixo {
+  background-color: var(--warm-lime);
+  color: var(--primary-dark);
+}
+
+.badge-status-critico {
+  background-color: var(--warm-peach);
+  color: var(--warm-terra);
+  border: 1px solid var(--warm-terra);
+}
+
+.badge-status-sem-estoque {
+  background-color: var(--warm-terra);
+  color: var(--white);
+  font-weight: 700;
+}
+
+/* Campo */
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.campo-erro { color: var(--warm-terra); }
+
+.campo .input-field[aria-invalid='true'] { border-color: var(--warm-terra); }
+
+/* Foco sempre visivel, em qualquer elemento operavel pelo teclado. */
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--primary-medium);
+  outline-offset: 2px;
+}
+
+/* Modal */
+.modal {
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-base);
+  width: min(560px, calc(100vw - var(--spacing-base) * 2));
+  color: var(--dark);
+  background-color: var(--white);
+}
+
+.modal::backdrop { background-color: rgb(15 23 42 / 45%); }
+
+.modal-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.modal-fechar {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--gray);
+  border-radius: var(--radius-sm);
+}
+
+.modal-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.modal-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-base);
+}
+
+/* Estado vazio */
+.estado-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xl) var(--spacing-base);
+  text-align: center;
+  background-color: var(--white);
+  border: 1px dashed var(--stone);
+  border-radius: var(--radius-md);
+}
+
+/* Paginacao */
+.paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.paginacao .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* A tabela rola na horizontal em tela estreita; o resto empilha. */
+@media (max-width: 768px) {
+  .layout-titulo,
+  .layout-cabecalho {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
