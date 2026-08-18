@@ -19,8 +19,8 @@ export default defineConfig([
     },
   },
   {
-    // Node: a API (server/) e os scripts da raiz nao rodam no navegador.
-    files: ['server/**/*.js', 'scripts/**/*.js'],
+    // Node: a API, os scripts e os testes nao rodam no navegador.
+    files: ['server/**/*.js', 'scripts/**/*.js', 'tests/**/*.js'],
     languageOptions: {
       globals: globals.node,
     },

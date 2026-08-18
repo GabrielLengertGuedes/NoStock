@@ -25,6 +25,11 @@ export function obterPool() {
   return pool
 }
 
+// Usado so pelos testes: troca o pool pelo cliente da transacao de teste.
+export function definirPool(substituto) {
+  pool = substituto
+}
+
 export async function bancoResponde() {
   try {
     await obterPool().query('select 1')
