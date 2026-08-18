@@ -8,6 +8,8 @@ import helmet from 'helmet'
 
 import { obterEnv } from './config/env.js'
 import { bancoResponde } from './db/pool.js'
+import { errorHandler } from './middlewares/errorHandler.js'
+import { AppError } from './shared/AppError.js'
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..')
 const versao = JSON.parse(readFileSync(join(raiz, 'package.json'), 'utf8')).version
@@ -33,11 +35,11 @@ export function criarApp() {
     })
   })
 
-  app.use('/api', (_req, res) => {
-    res.status(404).json({
-      erro: { codigo: 'NAO_ENCONTRADO', mensagem: 'Rota inexistente.' },
-    })
+  app.use('/api', (_req, _res, next) => {
+    next(new AppError('NAO_ENCONTRADO', 'Rota inexistente.'))
   })
+
+  app.use(errorHandler)
 
   return app
 }

@@ -24,5 +24,9 @@ export default defineConfig([
     languageOptions: {
       globals: globals.node,
     },
+    rules: {
+      // O Express so reconhece o tratador de erro se ele receber os quatro parametros.
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
   },
 ])
