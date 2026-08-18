@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 
 import App from '../App.jsx'
+import { Categorias } from '../pages/Categorias.jsx'
 
 function NaoEncontrada() {
   return (
@@ -17,6 +18,7 @@ export function Rotas() {
   return (
     <Routes>
       <Route path="/" element={<App />} />
+      <Route path="/categorias" element={<Categorias />} />
       <Route path="*" element={<NaoEncontrada />} />
     </Routes>
   )
