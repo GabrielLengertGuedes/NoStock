@@ -1,0 +1,21 @@
+/* Removidos estilos padrão do Vite. Tudo agora é regido pelo index.css (Design System) e classes utilitárias. */
+
+.showcase-section {
+  margin-bottom: var(--spacing-2xl);
+}
+
+.showcase-title {
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 2px solid var(--stone);
+}
+
+.component-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-base);
+}
+
+.form-group {
+  margin-bottom: var(--spacing-md);
+}
