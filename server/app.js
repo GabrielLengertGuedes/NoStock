@@ -5,9 +5,11 @@ import { fileURLToPath } from 'node:url'
 import cors from 'cors'
 import express from 'express'
 import helmet from 'helmet'
+import session from 'express-session'
+import connectPgSimple from 'connect-pg-simple'
 
 import { obterEnv } from './config/env.js'
-import { bancoResponde } from './db/pool.js'
+import { bancoResponde, obterPool } from './db/pool.js'
 import { errorHandler } from './middlewares/errorHandler.js'
 import { rotas as categorias } from './modules/categorias/routes.js'
 import { AppError } from './shared/AppError.js'
@@ -28,6 +30,25 @@ export function criarApp() {
   }
 
   app.use(express.json({ limit: '1mb' }))
+
+  const PgSession = connectPgSimple(session)
+  app.use(
+    session({
+      store: new PgSession({
+        pool: obterPool(),
+        tableName: 'session',
+      }),
+      secret: env.sessionSecret,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        secure: env.producao,
+        sameSite: 'lax',
+        maxAge: env.sessionMaxAgeHoras * 3600000,
+      },
+    })
+  )
 
   app.get('/api/health', async (_req, res) => {
     const banco = (await bancoResponde()) ? 'ok' : 'erro'
