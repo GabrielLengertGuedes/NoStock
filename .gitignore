@@ -59,3 +59,6 @@ specs/
 
 /*.md
 !/README.md
+
+# Agents
+.agents/
