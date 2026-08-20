@@ -5,7 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 
 import './index.css'
 import { queryClient } from './api/queryClient.js'
-import { AuthProvider } from './contexts/AuthContext.jsx'
+import { AuthProvider } from './contexts/AuthProvider.jsx'
 import { Rotas } from './routes/Rotas.jsx'
 
 createRoot(document.getElementById('root')).render(

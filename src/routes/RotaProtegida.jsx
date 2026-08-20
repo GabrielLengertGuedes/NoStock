@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 
-import { useAuth } from '../contexts/AuthContext.jsx'
+import { useAuth } from '../hooks/useAuth.js'
 
 export function RotaProtegida({ children, papel }) {
   const { autenticado, carregando, loginExigido, temPapel } = useAuth()

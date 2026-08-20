@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
-import { useAuth } from '../contexts/AuthContext.jsx'
+import { useAuth } from '../hooks/useAuth.js'
 import { Categorias } from '../pages/Categorias.jsx'
 import { Login } from '../pages/Login.jsx'
 import { RotaProtegida } from './RotaProtegida.jsx'

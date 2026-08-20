@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 
-import { AuthProvider } from '../../src/contexts/AuthContext.jsx'
+import { AuthProvider } from '../../src/contexts/AuthProvider.jsx'
 import { Login } from '../../src/pages/Login.jsx'
 
 describe('Login', () => {

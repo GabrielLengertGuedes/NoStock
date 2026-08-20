@@ -1,9 +1,8 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { entrar as apiEntrar, obterSessao, sair as apiSair } from '../api/auth.js'
 import { definirTratadorNaoAutenticado } from '../api/client.js'
-
-const AuthContext = createContext(null)
+import { AuthContext } from './auth-context.js'
 
 const AVISO_SESSAO_EXPIRADA = 'Sua sessão expirou. Entre novamente para continuar.'
 
@@ -85,12 +84,4 @@ export function AuthProvider({ children }) {
   }
 
   return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>
-}
-
-export function useAuth() {
-  const contexto = useContext(AuthContext)
-  if (!contexto) {
-    throw new Error('useAuth deve ser usado dentro de AuthProvider')
-  }
-  return contexto
 }

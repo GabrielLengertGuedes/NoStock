@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 
-import { useAuth } from '../contexts/AuthContext.jsx'
+import { useAuth } from '../hooks/useAuth.js'
 
 export function Layout({ titulo, acoes, menu = [], children }) {
   const { usuario, logout } = useAuth()

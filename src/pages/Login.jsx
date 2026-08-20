@@ -3,7 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 
 import { ErroApi } from '../api/client.js'
 import { Campo } from '../components/Campo.jsx'
-import { useAuth } from '../contexts/AuthContext.jsx'
+import { useAuth } from '../hooks/useAuth.js'
 
 export function Login({ modo = 'pagina' }) {
   const { autenticado, login, avisoSessao, limparAvisoSessao, loginExigido } = useAuth()
