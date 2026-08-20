@@ -1,12 +1,19 @@
 import { Router } from 'express'
-import { validate } from '../../middlewares/validate.js'
+
 import { requireAuth } from '../../middlewares/auth.js'
+import { validate } from '../../middlewares/validate.js'
 import * as controlador from './controller.js'
+import { limitadorDeLogin, recusarSeBloqueado } from './rateLimiter.js'
 import { corpoDoLogin } from './schema.js'
-import { limitadorDeLogin } from './rateLimiter.js'
 
 export const rotas = Router()
 
-rotas.post('/login', limitadorDeLogin, validate({ body: corpoDoLogin }), controlador.login)
+rotas.post(
+  '/login',
+  recusarSeBloqueado,
+  limitadorDeLogin,
+  validate({ body: corpoDoLogin }),
+  controlador.login,
+)
 rotas.post('/logout', requireAuth, controlador.logout)
 rotas.get('/me', requireAuth, controlador.me)
