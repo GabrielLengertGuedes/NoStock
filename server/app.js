@@ -14,6 +14,7 @@ import { bancoResponde, obterPool } from './db/pool.js'
 import { errorHandler } from './middlewares/errorHandler.js'
 import { rotas as auth } from './modules/auth/routes.js'
 import { rotas as categorias } from './modules/categorias/routes.js'
+import { rotas as usuarios } from './modules/usuarios/routes.js'
 import { AppError } from './shared/AppError.js'
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -61,6 +62,7 @@ export function criarApp() {
   })
 
   app.use('/api/auth', auth)
+  app.use('/api/usuarios', usuarios)
   app.use('/api/categorias', categorias)
 
   app.use('/api', (_req, _res, next) => {

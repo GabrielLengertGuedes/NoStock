@@ -1,7 +1,13 @@
 import bcrypt from 'bcrypt'
 
+import { obterEnv } from '../../config/env.js'
 import { AppError } from '../../shared/AppError.js'
-import { buscarPorEmailPeloLogin, buscarPorId } from '../usuarios/repository.js'
+import {
+  atualizarSenha,
+  buscarCredenciaisPorId,
+  buscarPorEmailPeloLogin,
+  buscarPorId,
+} from '../usuarios/repository.js'
 
 const MENSAGEM_LOGIN_INVALIDO = 'E-mail ou senha inválidos'
 
@@ -37,4 +43,19 @@ export async function me(id) {
   }
 
   return usuarioPublico(usuario)
+}
+
+export async function alterarSenha(id, senhaAtual, senhaNova) {
+  const usuario = await buscarCredenciaisPorId(id)
+
+  if (!usuario || !usuario.ativo) {
+    throw new AppError('NAO_AUTENTICADO', 'Sessão expirada ou não encontrada.')
+  }
+
+  const senhaValida = await bcrypt.compare(senhaAtual, usuario.senha_hash)
+  if (!senhaValida) {
+    throw new AppError('REGRA_NEGOCIO', 'A senha atual não confere.')
+  }
+
+  await atualizarSenha(id, await bcrypt.hash(senhaNova, obterEnv().bcryptRounds))
 }
