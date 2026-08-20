@@ -11,3 +11,15 @@ export async function buscarPorEmailPeloLogin(email) {
   )
   return result.rows[0] || null
 }
+
+export async function buscarPorId(id) {
+  const result = await obterPool().query(
+    `
+    select id, nome, email, papel, ativo
+    from usuarios
+    where id = $1
+    `,
+    [id]
+  )
+  return result.rows[0] || null
+}

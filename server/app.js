@@ -9,8 +9,10 @@ import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
 
 import { obterEnv } from './config/env.js'
+import { NOME_COOKIE_SESSAO } from './config/sessao.js'
 import { bancoResponde, obterPool } from './db/pool.js'
 import { errorHandler } from './middlewares/errorHandler.js'
+import { rotas as auth } from './modules/auth/routes.js'
 import { rotas as categorias } from './modules/categorias/routes.js'
 import { AppError } from './shared/AppError.js'
 
@@ -38,6 +40,7 @@ export function criarApp() {
         pool: obterPool(),
         tableName: 'session',
       }),
+      name: NOME_COOKIE_SESSAO,
       secret: env.sessionSecret,
       resave: false,
       saveUninitialized: false,
@@ -57,6 +60,7 @@ export function criarApp() {
     })
   })
 
+  app.use('/api/auth', auth)
   app.use('/api/categorias', categorias)
 
   app.use('/api', (_req, _res, next) => {
