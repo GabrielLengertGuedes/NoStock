@@ -11,11 +11,12 @@ import { EstadoVazio } from '../components/EstadoVazio.jsx'
 import { Layout } from '../components/Layout.jsx'
 import { Modal } from '../components/Modal.jsx'
 import { Tabela } from '../components/Tabela.jsx'
+import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
 
-const MENU = [{ para: '/categorias', rotulo: 'Categorias' }]
 const VAZIA = { nome: '', descricao: '' }
 
 export function Categorias() {
+  const menu = useMenuPrincipal()
   const consulta = useCategorias()
   const criar = useCriarCategoria()
   const atualizar = useAtualizarCategoria()
@@ -73,7 +74,7 @@ export function Categorias() {
   return (
     <Layout
       titulo="Categorias"
-      menu={MENU}
+      menu={menu}
       acoes={
         <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
           Nova categoria

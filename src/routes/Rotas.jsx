@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import { Categorias } from '../pages/Categorias.jsx'
 import { Login } from '../pages/Login.jsx'
+import { Usuarios } from '../pages/Usuarios.jsx'
 import { RotaProtegida } from './RotaProtegida.jsx'
 
 function NaoEncontrada() {
@@ -40,6 +41,14 @@ export function Rotas() {
           element={
             <RotaProtegida>
               <Categorias />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/usuarios"
+          element={
+            <RotaProtegida papel="GESTOR">
+              <Usuarios />
             </RotaProtegida>
           }
         />
