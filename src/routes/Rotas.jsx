@@ -1,7 +1,9 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
-import App from '../App.jsx'
+import { useAuth } from '../contexts/AuthContext.jsx'
 import { Categorias } from '../pages/Categorias.jsx'
+import { Login } from '../pages/Login.jsx'
+import { RotaProtegida } from './RotaProtegida.jsx'
 
 function NaoEncontrada() {
   return (
@@ -14,12 +16,43 @@ function NaoEncontrada() {
   )
 }
 
+function BloqueioDeSessao() {
+  const { loginExigido } = useAuth()
+  if (!loginExigido) return null
+  return <Login modo="bloqueio" />
+}
+
 export function Rotas() {
   return (
-    <Routes>
-      <Route path="/" element={<App />} />
-      <Route path="/categorias" element={<Categorias />} />
-      <Route path="*" element={<NaoEncontrada />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <RotaProtegida>
+              <Navigate to="/categorias" replace />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/categorias"
+          element={
+            <RotaProtegida>
+              <Categorias />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <RotaProtegida>
+              <NaoEncontrada />
+            </RotaProtegida>
+          }
+        />
+      </Routes>
+      <BloqueioDeSessao />
+    </>
   )
 }

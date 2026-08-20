@@ -45,6 +45,8 @@ export function criarApp() {
       secret: env.sessionSecret,
       resave: false,
       saveUninitialized: false,
+      // Renova o maxAge a cada request: 8 h de inatividade (RN12), não desde o login.
+      rolling: true,
       cookie: {
         httpOnly: true,
         secure: env.producao,
