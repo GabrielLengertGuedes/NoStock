@@ -45,3 +45,13 @@ export async function me(req, res, next) {
     next(erro)
   }
 }
+
+export async function alterarSenha(req, res, next) {
+  try {
+    const { senhaAtual, senhaNova } = req.validado.body
+    await servico.alterarSenha(req.session.usuarioId, senhaAtual, senhaNova)
+    res.status(204).end()
+  } catch (erro) {
+    next(erro)
+  }
+}
