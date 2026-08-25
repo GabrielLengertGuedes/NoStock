@@ -16,6 +16,19 @@ export const api = axios.create({
   timeout: 15_000,
 })
 
+let tratadorNaoAutenticado = null
+
+export function definirTratadorNaoAutenticado(tratador) {
+  tratadorNaoAutenticado = tratador
+}
+
+const ROTAS_PUBLICAS = ['/auth/login', '/auth/me']
+
+function ehRotaPublica(config) {
+  const url = config?.url ?? ''
+  return ROTAS_PUBLICAS.some((rota) => url === rota || url.endsWith(rota))
+}
+
 // A API responde { dados, meta } no sucesso e { erro } na falha. O sucesso ja
 // chega desembrulhado; a falha vira ErroApi, com o codigo e os campos.
 api.interceptors.response.use(
@@ -29,11 +42,21 @@ api.interceptors.response.use(
     }
 
     const erro = falha.response.data?.erro
-    throw new ErroApi({
+    const apiErro = new ErroApi({
       codigo: erro?.codigo ?? 'ERRO_INTERNO',
       mensagem: erro?.mensagem ?? 'Erro inesperado. Tente de novo.',
       campos: erro?.campos ?? null,
       status: falha.response.status,
     })
+
+    if (
+      falha.response.status === 401 &&
+      !ehRotaPublica(falha.config) &&
+      typeof tratadorNaoAutenticado === 'function'
+    ) {
+      tratadorNaoAutenticado()
+    }
+
+    throw apiErro
   },
 )
