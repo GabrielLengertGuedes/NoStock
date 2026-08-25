@@ -6,9 +6,14 @@ const COLUNAS = 'id, nome, descricao, ativo'
 // transacao sem que o repositorio saiba disso.
 export async function listar({ incluirInativas = false } = {}, conexao = obterPool()) {
   const { rows } = await conexao.query(
-    `select ${COLUNAS} from public.categorias
-     where ($1 or ativo)
-     order by nome`,
+    `select c.id, c.nome, c.descricao, c.ativo,
+            count(p.id)::int as "totalProdutos",
+            coalesce(sum(p.quantidade_atual), 0)::int as "unidadesEmEstoque"
+     from public.categorias c
+     left join public.produtos p on p.categoria_id = c.id and p.ativo = true
+     where ($1 or c.ativo)
+     group by c.id
+     order by c.nome`,
     [incluirInativas],
   )
   return rows
@@ -46,4 +51,12 @@ export async function inativar(id, conexao = obterPool()) {
     [id],
   )
   return rows[0] ?? null
+}
+
+export async function temProdutosAtivos(id, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `select 1 from public.produtos where categoria_id = $1 and ativo = true limit 1`,
+    [id],
+  )
+  return rows.length > 0
 }

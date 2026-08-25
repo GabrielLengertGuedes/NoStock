@@ -45,6 +45,10 @@ export async function atualizar(id, dados) {
 
 // Exclusao logica: a categoria sai das listagens e o historico continua de pe.
 export async function inativar(id) {
+  if (await repositorio.temProdutosAtivos(id)) {
+    throw new AppError('REGRA_NEGOCIO', 'Categoria com produtos ativos não pode ser inativada.')
+  }
+
   const categoria = await repositorio.inativar(id)
   if (categoria) return
 
