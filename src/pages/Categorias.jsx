@@ -54,6 +54,8 @@ export function Categorias() {
   const colunas = [
     { chave: 'nome', titulo: 'Nome' },
     { chave: 'descricao', titulo: 'Descrição', render: (c) => c.descricao ?? '—' },
+    { chave: 'totalProdutos', titulo: 'Produtos', alinhamento: 'right', render: (c) => c.totalProdutos ?? 0 },
+    { chave: 'unidadesEmEstoque', titulo: 'Em Estoque', alinhamento: 'right', render: (c) => c.unidadesEmEstoque ?? 0 },
     {
       chave: 'acoes',
       titulo: 'Ações',

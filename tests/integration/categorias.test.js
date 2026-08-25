@@ -107,4 +107,41 @@ describe.skipIf(!temBanco())('/api/categorias', () => {
     expect(segunda.status).toBe(400)
     expect(segunda.body.erro.codigo).toBe('REGRA_NEGOCIO')
   })
+
+  it('recusa inativar categoria com produtos ativos (RN08) com 400', async () => {
+    const resCategoria = await criar({ nome: NOME })
+    const categoriaId = resCategoria.body.dados.id
+
+    const { obterPool } = await import('../../server/db/pool.js')
+    await obterPool().query(
+      `insert into public.produtos (nome, categoria_id, preco_venda) values ($1, $2, $3)`,
+      ['Produto Ativo', categoriaId, 10.0]
+    )
+
+    const resposta = await request(app).delete(`/api/categorias/${categoriaId}`)
+    expect(resposta.status).toBe(400)
+    expect(resposta.body.erro.codigo).toBe('REGRA_NEGOCIO')
+  })
+
+  it('traz os agregados totalProdutos e unidadesEmEstoque na listagem', async () => {
+    const resCategoria = await criar({ nome: NOME })
+    const categoriaId = resCategoria.body.dados.id
+
+    const { obterPool } = await import('../../server/db/pool.js')
+    await obterPool().query(
+      `insert into public.produtos (nome, categoria_id, preco_venda, quantidade_atual) values ($1, $2, $3, $4)`,
+      ['Produto 1', categoriaId, 10.0, 5]
+    )
+    await obterPool().query(
+      `insert into public.produtos (nome, categoria_id, preco_venda, quantidade_atual) values ($1, $2, $3, $4)`,
+      ['Produto 2', categoriaId, 20.0, 3]
+    )
+
+    const resposta = await request(app).get('/api/categorias')
+    expect(resposta.status).toBe(200)
+
+    const categoria = resposta.body.dados.find((c) => c.id === categoriaId)
+    expect(categoria.totalProdutos).toBe(2)
+    expect(categoria.unidadesEmEstoque).toBe(8)
+  })
 })
