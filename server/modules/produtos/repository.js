@@ -1,0 +1,87 @@
+import { obterPool } from '../../db/pool.js'
+import { statusEstoqueSql } from '../../shared/statusEstoque.js'
+
+const STATUS_SQL = statusEstoqueSql('p.quantidade_atual', 'p.estoque_minimo')
+
+const COLUNA_DE_ORDENACAO = {
+  nome: 'p.nome',
+  quantidade: 'p.quantidade_atual',
+  categoria: 'c.nome',
+}
+
+// Reaproveitada pela contagem e pela pagina: as duas precisam do mesmo filtro,
+// so a segunda tambem junta categoria/fornecedor para exibir o nome.
+function filtrar({ busca, categoriaId, fornecedorId, status, ativo }) {
+  const condicoes = []
+  const valores = []
+
+  const proximoParametro = (valor) => {
+    valores.push(valor)
+    return `$${valores.length}`
+  }
+
+  if (ativo !== 'todos') {
+    condicoes.push(`p.ativo = ${proximoParametro(ativo === 'true')}`)
+  }
+  if (busca) {
+    condicoes.push(
+      `public.sem_acento(lower(p.nome)) like ('%' || public.sem_acento(lower(${proximoParametro(busca)})) || '%')`,
+    )
+  }
+  if (categoriaId) {
+    condicoes.push(`p.categoria_id = ${proximoParametro(categoriaId)}`)
+  }
+  if (fornecedorId) {
+    condicoes.push(`p.fornecedor_id = ${proximoParametro(fornecedorId)}`)
+  }
+  if (status === 'PRECISA_REPOR') {
+    condicoes.push(`(${STATUS_SQL}) in ('BAIXO', 'CRITICO', 'SEM_ESTOQUE')`)
+  } else if (status) {
+    condicoes.push(`(${STATUS_SQL}) = ${proximoParametro(status)}`)
+  }
+
+  return {
+    onde: condicoes.length ? `where ${condicoes.join(' and ')}` : '',
+    valores,
+  }
+}
+
+export async function listar(filtros, conexao = obterPool()) {
+  const { pagina = 1, porPagina = 20, ordenarPor = 'nome', ordem = 'asc' } = filtros
+
+  const { onde, valores } = filtrar(filtros)
+
+  const { rows: contagem } = await conexao.query(
+    `select count(*)::int as total from public.produtos p ${onde}`,
+    valores,
+  )
+  const total = contagem[0].total
+
+  const coluna = COLUNA_DE_ORDENACAO[ordenarPor] ?? COLUNA_DE_ORDENACAO.nome
+  const direcao = ordem === 'desc' ? 'desc' : 'asc'
+  const limite = `$${valores.length + 1}`
+  const deslocamento = `$${valores.length + 2}`
+
+  // O cast para float8 evita que o driver devolva preco_venda como string: sem ele
+  // o front receberia "189.90" (numeric vira string no pg) em vez do numero 189.90.
+  const { rows: produtos } = await conexao.query(
+    `select p.id, p.nome, p.descricao,
+            jsonb_build_object('id', c.id, 'nome', c.nome) as categoria,
+            case when f.id is null then null
+                 else jsonb_build_object('id', f.id, 'nome', f.nome) end as fornecedor,
+            p.preco_venda::float8 as "precoVenda",
+            p.quantidade_atual as "quantidadeAtual",
+            p.estoque_minimo as "estoqueMinimo",
+            ${STATUS_SQL} as "statusEstoque",
+            p.ativo
+       from public.produtos p
+       join public.categorias c on c.id = p.categoria_id
+       left join public.fornecedores f on f.id = p.fornecedor_id
+       ${onde}
+       order by ${coluna} ${direcao}
+       limit ${limite} offset ${deslocamento}`,
+    [...valores, porPagina, (pagina - 1) * porPagina],
+  )
+
+  return { produtos, total }
+}
