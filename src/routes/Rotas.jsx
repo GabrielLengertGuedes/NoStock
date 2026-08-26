@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 
 import App from '../App.jsx'
 import { Categorias } from '../pages/Categorias.jsx'
+import { Fornecedores } from '../pages/Fornecedores.jsx'
 
 function NaoEncontrada() {
   return (
@@ -19,6 +20,7 @@ export function Rotas() {
     <Routes>
       <Route path="/" element={<App />} />
       <Route path="/categorias" element={<Categorias />} />
+      <Route path="/fornecedores" element={<Fornecedores />} />
       <Route path="*" element={<NaoEncontrada />} />
     </Routes>
   )
