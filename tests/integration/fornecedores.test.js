@@ -5,9 +5,9 @@ import { criarApp } from '../../server/app.js'
 import { abrirTransacao, desfazerTransacao, temBanco } from '../helpers/banco.js'
 
 const NOME = 'Fornecedor Teste'
-const CNPJ_VALIDO = '19.980.203/0001-20'
-const CNPJ_VALIDO_LIMPO = '19980203000120'
-const CNPJ_INVALIDO = '19.980.203/0001-21' // digito errado
+const CNPJ_VALIDO = '19.980.203/0001-10'
+const CNPJ_VALIDO_LIMPO = '19980203000110'
+const CNPJ_INVALIDO = '19.980.203/0001-11' // digito errado
 
 describe.skipIf(!temBanco())('/api/fornecedores', () => {
   let app

@@ -12,7 +12,82 @@
 
 .layout-marca { color: var(--primary-dark); }
 
+.layout-cabecalho-direita {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.layout-usuario {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
 .layout-conteudo { padding-block: var(--spacing-base); }
+
+/* Login */
+.login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-base);
+  background:
+    radial-gradient(circle at top left, var(--accent-pale), transparent 45%),
+    radial-gradient(circle at bottom right, var(--warm-lime), transparent 40%),
+    var(--sand);
+}
+
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-base);
+}
+
+.login-bloqueio {
+  min-height: auto;
+  background: transparent;
+  padding: 0;
+}
+
+.login-cartao {
+  width: min(100%, 420px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-base);
+}
+
+.login-cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.login-formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.login-aviso {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  background-color: var(--warm-peach);
+  color: var(--warm-terra);
+  border: 1px solid var(--warm-terra);
+}
+
+.login-rodape {
+  text-align: center;
+  color: var(--gray);
+}
 
 .layout-titulo {
   display: flex;
