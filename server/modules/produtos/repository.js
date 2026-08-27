@@ -9,6 +9,28 @@ const COLUNA_DE_ORDENACAO = {
   categoria: 'c.nome',
 }
 
+// Mesma forma em toda consulta que devolve produto: listagem, criacao e (mais
+// tarde) atualizacao. Um so lugar decide o formato do objeto "produto" da API.
+// O cast para float8 evita que o driver devolva preco_venda como string: sem ele
+// o front receberia "189.90" (numeric vira string no pg) em vez do numero 189.90.
+const SELECAO = `
+  p.id, p.nome, p.descricao,
+  jsonb_build_object('id', c.id, 'nome', c.nome) as categoria,
+  case when f.id is null then null
+       else jsonb_build_object('id', f.id, 'nome', f.nome) end as fornecedor,
+  p.preco_venda::float8 as "precoVenda",
+  p.quantidade_atual as "quantidadeAtual",
+  p.estoque_minimo as "estoqueMinimo",
+  ${STATUS_SQL} as "statusEstoque",
+  p.ativo
+`
+
+const JUNCOES = `
+  from public.produtos p
+  join public.categorias c on c.id = p.categoria_id
+  left join public.fornecedores f on f.id = p.fornecedor_id
+`
+
 // Reaproveitada pela contagem e pela pagina: as duas precisam do mesmo filtro,
 // so a segunda tambem junta categoria/fornecedor para exibir o nome.
 function filtrar({ busca, categoriaId, fornecedorId, status, ativo }) {
@@ -62,21 +84,8 @@ export async function listar(filtros, conexao = obterPool()) {
   const limite = `$${valores.length + 1}`
   const deslocamento = `$${valores.length + 2}`
 
-  // O cast para float8 evita que o driver devolva preco_venda como string: sem ele
-  // o front receberia "189.90" (numeric vira string no pg) em vez do numero 189.90.
   const { rows: produtos } = await conexao.query(
-    `select p.id, p.nome, p.descricao,
-            jsonb_build_object('id', c.id, 'nome', c.nome) as categoria,
-            case when f.id is null then null
-                 else jsonb_build_object('id', f.id, 'nome', f.nome) end as fornecedor,
-            p.preco_venda::float8 as "precoVenda",
-            p.quantidade_atual as "quantidadeAtual",
-            p.estoque_minimo as "estoqueMinimo",
-            ${STATUS_SQL} as "statusEstoque",
-            p.ativo
-       from public.produtos p
-       join public.categorias c on c.id = p.categoria_id
-       left join public.fornecedores f on f.id = p.fornecedor_id
+    `select ${SELECAO} ${JUNCOES}
        ${onde}
        order by ${coluna} ${direcao}
        limit ${limite} offset ${deslocamento}`,
@@ -84,4 +93,53 @@ export async function listar(filtros, conexao = obterPool()) {
   )
 
   return { produtos, total }
+}
+
+export async function buscarPorId(id, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `select ${SELECAO} ${JUNCOES} where p.id = $1`,
+    [id],
+  )
+  return rows[0] ?? null
+}
+
+export async function existeAtivoComMesmoNome(nome, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `select 1 from public.produtos where nome = $1 and ativo limit 1`,
+    [nome],
+  )
+  return rows.length > 0
+}
+
+export async function criar(dados, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `insert into public.produtos
+       (nome, descricao, categoria_id, fornecedor_id, preco_venda, quantidade_atual, estoque_minimo)
+     values ($1, $2, $3, $4, $5, $6, $7)
+     returning id`,
+    [
+      dados.nome,
+      dados.descricao,
+      dados.categoriaId,
+      dados.fornecedorId,
+      dados.precoVenda,
+      dados.estoqueInicial,
+      dados.estoqueMinimo,
+    ],
+  )
+  return rows[0].id
+}
+
+// RN02: todo saldo criado com produto novo tambem vira uma movimentacao,
+// para o historico nascer completo em vez de comecar com um numero do nada.
+export async function registrarEstoqueInicial(
+  { produtoId, usuarioId, quantidade, precoVenda },
+  conexao = obterPool(),
+) {
+  await conexao.query(
+    `insert into public.movimentacoes
+       (produto_id, usuario_id, tipo, motivo, quantidade, saldo_anterior, saldo_posterior, preco_unitario)
+     values ($1, $2, 'ENTRADA', 'ESTOQUE_INICIAL', $3, 0, $3, $4)`,
+    [produtoId, usuarioId, quantidade, precoVenda],
+  )
 }
