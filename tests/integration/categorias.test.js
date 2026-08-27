@@ -1,22 +1,71 @@
+import bcrypt from 'bcrypt'
 import request from 'supertest'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { criarApp } from '../../server/app.js'
+import { obterPool } from '../../server/db/pool.js'
 import { abrirTransacao, desfazerTransacao, temBanco } from '../helpers/banco.js'
 
 const NOME = '[teste] Camas'
+const SENHA = 'Senha123'
 
 describe.skipIf(!temBanco())('/api/categorias', () => {
   let app
+  let cliente
+  let hashSenha
+
+  beforeAll(async () => {
+    hashSenha = await bcrypt.hash(SENHA, 4)
+  })
 
   beforeEach(async () => {
     await abrirTransacao()
     app = criarApp()
+    await obterPool().query(
+      `insert into usuarios (nome, email, senha_hash, papel, ativo)
+       values ($1, $2, $3, 'GESTOR', true), ($4, $5, $3, 'OPERADOR', true)`,
+      [
+        'Gestor Categorias',
+        'teste.categorias.gestor@exemplo.com',
+        hashSenha,
+        'Operador Categorias',
+        'teste.categorias.operador@exemplo.com',
+      ],
+    )
+    cliente = request.agent(app)
+    await cliente.post('/api/auth/login').send({
+      email: 'teste.categorias.gestor@exemplo.com',
+      senha: SENHA,
+    })
   })
 
   afterEach(desfazerTransacao)
 
-  const criar = (corpo) => request(app).post('/api/categorias').send(corpo)
+  const criar = (corpo) => cliente.post('/api/categorias').send(corpo)
+
+  it('recusa leitura sem sessao com 401', async () => {
+    const resposta = await request(app).get('/api/categorias')
+
+    expect(resposta.status).toBe(401)
+    expect(resposta.body.erro.codigo).toBe('NAO_AUTENTICADO')
+  })
+
+  it('recusa escritas de operador com 403', async () => {
+    const operador = request.agent(app)
+    await operador.post('/api/auth/login').send({
+      email: 'teste.categorias.operador@exemplo.com',
+      senha: SENHA,
+    })
+
+    const criarResposta = await operador.post('/api/categorias').send({ nome: NOME })
+    const atualizarResposta = await operador.put('/api/categorias/1').send({ nome: `${NOME} atualizada` })
+    const inativarResposta = await operador.delete('/api/categorias/1')
+
+    expect(criarResposta.status).toBe(403)
+    expect(atualizarResposta.status).toBe(403)
+    expect(inativarResposta.status).toBe(403)
+    expect(criarResposta.body.erro.codigo).toBe('SEM_PERMISSAO')
+  })
 
   it('cria e devolve 201 com a categoria', async () => {
     const resposta = await criar({ nome: NOME, descricao: 'Camas e colchonetes' })
@@ -48,7 +97,7 @@ describe.skipIf(!temBanco())('/api/categorias', () => {
   })
 
   it('lista em ordem de nome e traz as categorias base', async () => {
-    const resposta = await request(app).get('/api/categorias')
+    const resposta = await cliente.get('/api/categorias')
 
     expect(resposta.status).toBe(200)
     const nomes = resposta.body.dados.map((c) => c.nome)
@@ -59,17 +108,17 @@ describe.skipIf(!temBanco())('/api/categorias', () => {
   it('busca por id e responde 404 para id inexistente', async () => {
     const { body } = await criar({ nome: NOME })
 
-    const achada = await request(app).get(`/api/categorias/${body.dados.id}`)
+    const achada = await cliente.get(`/api/categorias/${body.dados.id}`)
     expect(achada.status).toBe(200)
     expect(achada.body.dados.nome).toBe(NOME)
 
-    const perdida = await request(app).get('/api/categorias/99999999')
+    const perdida = await cliente.get('/api/categorias/99999999')
     expect(perdida.status).toBe(404)
     expect(perdida.body.erro.codigo).toBe('NAO_ENCONTRADO')
   })
 
   it('recusa id que nao e numero com 422', async () => {
-    const resposta = await request(app).get('/api/categorias/abc')
+    const resposta = await cliente.get('/api/categorias/abc')
 
     expect(resposta.status).toBe(422)
     expect(resposta.body.erro.codigo).toBe('VALIDACAO')
@@ -78,7 +127,7 @@ describe.skipIf(!temBanco())('/api/categorias', () => {
   it('atualiza nome e descricao', async () => {
     const { body } = await criar({ nome: NOME, descricao: 'antes' })
 
-    const resposta = await request(app)
+    const resposta = await cliente
       .put(`/api/categorias/${body.dados.id}`)
       .send({ nome: `${NOME} macias`, descricao: 'depois' })
 
@@ -89,21 +138,21 @@ describe.skipIf(!temBanco())('/api/categorias', () => {
   it('inativa, some da listagem padrao e reaparece com incluirInativas', async () => {
     const { body } = await criar({ nome: NOME })
 
-    const remocao = await request(app).delete(`/api/categorias/${body.dados.id}`)
+    const remocao = await cliente.delete(`/api/categorias/${body.dados.id}`)
     expect(remocao.status).toBe(204)
 
-    const padrao = await request(app).get('/api/categorias')
+    const padrao = await cliente.get('/api/categorias')
     expect(padrao.body.dados.map((c) => c.nome)).not.toContain(NOME)
 
-    const comInativas = await request(app).get('/api/categorias?incluirInativas=true')
+    const comInativas = await cliente.get('/api/categorias?incluirInativas=true')
     expect(comInativas.body.dados.map((c) => c.nome)).toContain(NOME)
   })
 
   it('nao inativa duas vezes', async () => {
     const { body } = await criar({ nome: NOME })
-    await request(app).delete(`/api/categorias/${body.dados.id}`)
+    await cliente.delete(`/api/categorias/${body.dados.id}`)
 
-    const segunda = await request(app).delete(`/api/categorias/${body.dados.id}`)
+    const segunda = await cliente.delete(`/api/categorias/${body.dados.id}`)
     expect(segunda.status).toBe(400)
     expect(segunda.body.erro.codigo).toBe('REGRA_NEGOCIO')
   })
@@ -118,7 +167,7 @@ describe.skipIf(!temBanco())('/api/categorias', () => {
       ['Produto Ativo', categoriaId, 10.0]
     )
 
-    const resposta = await request(app).delete(`/api/categorias/${categoriaId}`)
+    const resposta = await cliente.delete(`/api/categorias/${categoriaId}`)
     expect(resposta.status).toBe(400)
     expect(resposta.body.erro.codigo).toBe('REGRA_NEGOCIO')
   })
@@ -137,7 +186,7 @@ describe.skipIf(!temBanco())('/api/categorias', () => {
       ['Produto 2', categoriaId, 20.0, 3]
     )
 
-    const resposta = await request(app).get('/api/categorias')
+    const resposta = await cliente.get('/api/categorias')
     expect(resposta.status).toBe(200)
 
     const categoria = resposta.body.dados.find((c) => c.id === categoriaId)

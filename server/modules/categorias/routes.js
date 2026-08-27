@@ -1,5 +1,6 @@
 import { Router } from 'express'
 
+import { requireAuth, requireRole } from '../../middlewares/auth.js'
 import { validate } from '../../middlewares/validate.js'
 import * as controlador from './controller.js'
 import {
@@ -11,8 +12,11 @@ import {
 
 export const rotas = Router()
 
-rotas.get('/', validate({ query: filtrosDeListagem }), controlador.listar)
-rotas.post('/', validate({ body: corpoDeCriacao }), controlador.criar)
-rotas.get('/:id', validate({ params: parametroId }), controlador.buscarPorId)
-rotas.put('/:id', validate({ params: parametroId, body: corpoDeAtualizacao }), controlador.atualizar)
-rotas.delete('/:id', validate({ params: parametroId }), controlador.inativar)
+const autenticado = [requireAuth]
+const soGestor = [requireAuth, requireRole('GESTOR')]
+
+rotas.get('/', ...autenticado, validate({ query: filtrosDeListagem }), controlador.listar)
+rotas.post('/', ...soGestor, validate({ body: corpoDeCriacao }), controlador.criar)
+rotas.get('/:id', ...autenticado, validate({ params: parametroId }), controlador.buscarPorId)
+rotas.put('/:id', ...soGestor, validate({ params: parametroId, body: corpoDeAtualizacao }), controlador.atualizar)
+rotas.delete('/:id', ...soGestor, validate({ params: parametroId }), controlador.inativar)

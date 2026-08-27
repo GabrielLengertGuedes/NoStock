@@ -11,6 +11,7 @@ import { EstadoVazio } from '../components/EstadoVazio.jsx'
 import { Layout } from '../components/Layout.jsx'
 import { Modal } from '../components/Modal.jsx'
 import { Tabela } from '../components/Tabela.jsx'
+import { useAuth } from '../hooks/useAuth.js'
 
 const MENU = [{ para: '/fornecedores', rotulo: 'Fornecedores' }]
 const VAZIA = { nome: '', cnpj: '', contato_nome: '', telefone: '', email: '', observacao: '' }
@@ -22,6 +23,8 @@ function formatarCnpj(cnpj) {
 }
 
 export function Fornecedores() {
+  const { temPapel } = useAuth()
+  const podeEditar = temPapel('GESTOR')
   const consulta = useFornecedores()
   const criar = useCriarFornecedor()
   const atualizar = useAtualizarFornecedor()
@@ -85,14 +88,16 @@ export function Fornecedores() {
       titulo: 'Ações',
       alinhamento: 'right',
       render: (fornecedor) => (
-        <div className="flex gap-sm" style={{ justifyContent: 'flex-end' }}>
-          <button type="button" className="btn btn-secondary" onClick={() => abrirFormulario(fornecedor)}>
-            Editar
-          </button>
-          <button type="button" className="btn btn-danger" onClick={() => setAInativar(fornecedor)}>
-            Inativar
-          </button>
-        </div>
+        podeEditar ? (
+          <div className="flex gap-sm" style={{ justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => abrirFormulario(fornecedor)}>
+              Editar
+            </button>
+            <button type="button" className="btn btn-danger" onClick={() => setAInativar(fornecedor)}>
+              Inativar
+            </button>
+          </div>
+        ) : null
       ),
     },
   ]
@@ -101,11 +106,11 @@ export function Fornecedores() {
     <Layout
       titulo="Fornecedores"
       menu={MENU}
-      acoes={
+      acoes={podeEditar ? (
         <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
           Novo fornecedor
         </button>
-      }
+      ) : null}
     >
       {consulta.isError && (
         <p className="campo-erro text-body" role="alert">
