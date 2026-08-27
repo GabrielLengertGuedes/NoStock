@@ -53,6 +53,19 @@ describe.skipIf(!temBanco())('/api/fornecedores', () => {
     expect(resposta.body.erro.codigo).toBe('NAO_AUTENTICADO')
   })
 
+  it('permite leitura autenticada para operador com 200', async () => {
+    const operador = request.agent(app)
+    await operador.post('/api/auth/login').send({
+      email: 'teste.fornecedores.operador@exemplo.com',
+      senha: SENHA,
+    })
+
+    const resposta = await operador.get('/api/fornecedores')
+
+    expect(resposta.status).toBe(200)
+    expect(resposta.body.dados).toBeInstanceOf(Array)
+  })
+
   it('recusa escrita de operador com 403', async () => {
     const operador = request.agent(app)
     await operador.post('/api/auth/login').send({

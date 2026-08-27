@@ -12,8 +12,8 @@ import { Layout } from '../components/Layout.jsx'
 import { Modal } from '../components/Modal.jsx'
 import { Tabela } from '../components/Tabela.jsx'
 import { useAuth } from '../hooks/useAuth.js'
+import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
 
-const MENU = [{ para: '/fornecedores', rotulo: 'Fornecedores' }]
 const VAZIA = { nome: '', cnpj: '', contato_nome: '', telefone: '', email: '', observacao: '' }
 
 // Função utilitária para aplicar máscara no CNPJ para exibição
@@ -25,6 +25,7 @@ function formatarCnpj(cnpj) {
 export function Fornecedores() {
   const { temPapel } = useAuth()
   const podeEditar = temPapel('GESTOR')
+  const menu = useMenuPrincipal()
   const consulta = useFornecedores()
   const criar = useCriarFornecedor()
   const atualizar = useAtualizarFornecedor()
@@ -100,12 +101,12 @@ export function Fornecedores() {
         ) : null
       ),
     },
-  ]
+  ].filter((coluna) => podeEditar || coluna.chave !== 'acoes')
 
   return (
     <Layout
       titulo="Fornecedores"
-      menu={MENU}
+      menu={menu}
       acoes={podeEditar ? (
         <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
           Novo fornecedor
@@ -126,11 +127,11 @@ export function Fornecedores() {
           <EstadoVazio
             titulo="Nenhum fornecedor cadastrado"
             descricao="Cadastre fornecedores para associá-los aos produtos do catálogo."
-            acao={
+            acao={podeEditar ? (
               <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
                 Cadastrar o primeiro
               </button>
-            }
+            ) : null}
           />
         }
       />
