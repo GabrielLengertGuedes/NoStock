@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+export const parametroId = z.object({
+  id: z.coerce.number().int().positive(),
+})
+
 const STATUS = ['NORMAL', 'BAIXO', 'CRITICO', 'SEM_ESTOQUE', 'PRECISA_REPOR']
 const ORDENAVEIS = ['nome', 'quantidade', 'categoria']
 
@@ -30,21 +34,48 @@ const descricao = z
 
 const precoVenda = z.number().nonnegative('Não pode ser negativo')
 
+const categoriaId = z.number().int().positive()
+
+const fornecedorId = z
+  .number()
+  .int()
+  .positive()
+  .nullish()
+  .transform((valor) => valor ?? null)
+
 // Corpo JSON chega com o tipo certo: aqui e numero de verdade, nao precisa de coerce.
 const quantidadeNaoNegativa = (mensagem) => z.number().int().nonnegative(mensagem).optional().default(0)
 
 export const corpoDeCriacao = z.object({
   nome,
   descricao,
-  categoriaId: z.number().int().positive(),
-  fornecedorId: z
-    .number()
-    .int()
-    .positive()
-    .nullish()
-    .transform((valor) => valor ?? null),
+  categoriaId,
+  fornecedorId,
   precoVenda,
   estoqueInicial: quantidadeNaoNegativa('Não pode ser negativo'),
   estoqueMinimo: quantidadeNaoNegativa('Não pode ser negativo'),
   confirmarNomeDuplicado: z.boolean().optional().default(false),
 })
+
+// quantidadeAtual so existe aqui para ser recusada: o saldo muda por movimentacao,
+// nunca pelo PUT (RN02, CA6.2). Precisa entrar no shape para nao ser descartado
+// em silencio antes do superRefine conseguir ver que o campo foi enviado.
+export const corpoDeAtualizacao = z
+  .object({
+    nome,
+    descricao,
+    categoriaId,
+    fornecedorId,
+    precoVenda,
+    estoqueMinimo: z.number().int().nonnegative('Não pode ser negativo'),
+    quantidadeAtual: z.unknown().optional(),
+  })
+  .superRefine((dados, ctx) => {
+    if (dados.quantidadeAtual !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['quantidadeAtual'],
+        message: 'O saldo só pode ser alterado por uma movimentação',
+      })
+    }
+  })

@@ -143,3 +143,32 @@ export async function registrarEstoqueInicial(
     [produtoId, usuarioId, quantidade, precoVenda],
   )
 }
+
+// quantidade_atual nunca aparece aqui: o saldo so muda por movimentacao (RN02).
+export async function atualizar(id, dados, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `update public.produtos
+        set nome = $2, descricao = $3, categoria_id = $4, fornecedor_id = $5,
+            preco_venda = $6, estoque_minimo = $7
+      where id = $1
+      returning id`,
+    [id, dados.nome, dados.descricao, dados.categoriaId, dados.fornecedorId, dados.precoVenda, dados.estoqueMinimo],
+  )
+  return rows[0]?.id ?? null
+}
+
+export async function inativar(id, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `update public.produtos set ativo = false where id = $1 and ativo returning id`,
+    [id],
+  )
+  return rows[0]?.id ?? null
+}
+
+export async function reativar(id, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `update public.produtos set ativo = true where id = $1 and not ativo returning id`,
+    [id],
+  )
+  return rows[0]?.id ?? null
+}

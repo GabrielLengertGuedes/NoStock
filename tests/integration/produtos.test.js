@@ -49,9 +49,10 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
     return rows[0].id
   }
 
-  const logar = async () => {
+  const logar = async (papel = 'OPERADOR') => {
+    const email = papel === 'GESTOR' ? 'produtos.gestor@exemplo.com' : 'produtos.teste@exemplo.com'
     const cliente = request.agent(app)
-    await cliente.post('/api/auth/login').send({ email: 'produtos.teste@exemplo.com', senha: SENHA })
+    await cliente.post('/api/auth/login').send({ email, senha: SENHA })
     return cliente
   }
 
@@ -61,11 +62,12 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
 
     const { rows } = await obterPool().query(
       `insert into public.usuarios (nome, email, senha_hash, papel)
-       values ('Operador Teste', 'produtos.teste@exemplo.com', $1, 'OPERADOR')
-       returning id`,
+       values ('Operador Teste', 'produtos.teste@exemplo.com', $1, 'OPERADOR'),
+              ('Gestor Teste', 'produtos.gestor@exemplo.com', $1, 'GESTOR')
+       returning id, papel`,
       [hashSenha],
     )
-    usuarioId = rows[0].id
+    usuarioId = rows.find((u) => u.papel === 'OPERADOR').id
 
     categoriaRacao = await criarCategoria('Ração Teste')
     categoriaHigiene = await criarCategoria('Higiene Teste')
@@ -362,5 +364,120 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
 
     expect(resposta.status).toBe(401)
     expect(resposta.body.erro.codigo).toBe('NAO_AUTENTICADO')
+  })
+
+  const atualizarViaApi = (cliente, id, corpo) => cliente.put(`/api/produtos/${id}`).send(corpo)
+
+  it('atualiza um produto', async () => {
+    const cliente = await logar()
+    const id = idPorNome['Shampoo Neutro Pet']
+
+    const resposta = await atualizarViaApi(cliente, id, {
+      nome: 'Shampoo Neutro Pet Extra',
+      categoriaId: categoriaRacao,
+      fornecedorId: fornecedorX,
+      precoVenda: 45,
+      estoqueMinimo: 8,
+    })
+
+    expect(resposta.status).toBe(200)
+    expect(resposta.body.dados).toMatchObject({
+      nome: 'Shampoo Neutro Pet Extra',
+      categoria: { id: categoriaRacao, nome: 'Ração Teste' },
+      fornecedor: { id: fornecedorX, nome: 'Fornecedor X' },
+      precoVenda: 45,
+      estoqueMinimo: 8,
+    })
+  })
+
+  it('recusa alterar quantidadeAtual pelo PUT com 422', async () => {
+    const cliente = await logar()
+    const id = idPorNome['Shampoo Neutro Pet']
+
+    const resposta = await atualizarViaApi(cliente, id, {
+      nome: 'Shampoo Neutro Pet',
+      categoriaId: categoriaHigiene,
+      precoVenda: 10,
+      estoqueMinimo: 10,
+      quantidadeAtual: 999,
+    })
+
+    expect(resposta.status).toBe(422)
+    expect(resposta.body.erro.codigo).toBe('VALIDACAO')
+    expect(resposta.body.erro.campos.quantidadeAtual).toBe(
+      'O saldo só pode ser alterado por uma movimentação',
+    )
+  })
+
+  it('responde 404 ao atualizar produto inexistente', async () => {
+    const cliente = await logar()
+
+    const resposta = await atualizarViaApi(cliente, 99999999, {
+      nome: 'Não existe',
+      categoriaId: categoriaRacao,
+      precoVenda: 10,
+      estoqueMinimo: 0,
+    })
+
+    expect(resposta.status).toBe(404)
+    expect(resposta.body.erro.codigo).toBe('NAO_ENCONTRADO')
+  })
+
+  it('inativa um produto e ele some da listagem padrao (204, so gestor)', async () => {
+    const id = idPorNome['Brinquedo Corda Resistente']
+
+    const operador = await logar('OPERADOR')
+    const negado = await operador.delete(`/api/produtos/${id}`)
+    expect(negado.status).toBe(403)
+
+    const gestor = await logar('GESTOR')
+    const resposta = await gestor.delete(`/api/produtos/${id}`)
+    expect(resposta.status).toBe(204)
+
+    const padrao = await listar()
+    expect(padrao.body.dados.map((p) => p.id)).not.toContain(id)
+  })
+
+  it('nao inativa produto ja inativo (400 REGRA_NEGOCIO)', async () => {
+    const gestor = await logar('GESTOR')
+    const id = idPorNome['Brinquedo Corda Resistente']
+
+    await gestor.delete(`/api/produtos/${id}`)
+    const segunda = await gestor.delete(`/api/produtos/${id}`)
+
+    expect(segunda.status).toBe(400)
+    expect(segunda.body.erro.codigo).toBe('REGRA_NEGOCIO')
+  })
+
+  it('responde 404 ao inativar produto inexistente', async () => {
+    const gestor = await logar('GESTOR')
+
+    const resposta = await gestor.delete('/api/produtos/99999999')
+    expect(resposta.status).toBe(404)
+    expect(resposta.body.erro.codigo).toBe('NAO_ENCONTRADO')
+  })
+
+  it('reativa um produto inativo (204, so gestor) e ele volta a aparecer', async () => {
+    const gestor = await logar('GESTOR')
+    const id = idPorNome['Brinquedo Corda Resistente']
+    await gestor.delete(`/api/produtos/${id}`)
+
+    const operador = await logar('OPERADOR')
+    const negado = await operador.post(`/api/produtos/${id}/reativar`)
+    expect(negado.status).toBe(403)
+
+    const resposta = await gestor.post(`/api/produtos/${id}/reativar`)
+    expect(resposta.status).toBe(204)
+
+    const padrao = await listar()
+    expect(padrao.body.dados.map((p) => p.id)).toContain(id)
+  })
+
+  it('nao reativa produto ja ativo (400 REGRA_NEGOCIO)', async () => {
+    const gestor = await logar('GESTOR')
+
+    const resposta = await gestor.post(`/api/produtos/${idPorNome['Brinquedo Corda Resistente']}/reativar`)
+    expect(resposta.status).toBe(400)
+    expect(resposta.body.erro.codigo).toBe('REGRA_NEGOCIO')
   })
 })
