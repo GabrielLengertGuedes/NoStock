@@ -1,9 +1,12 @@
+import bcrypt from 'bcrypt'
 import request from 'supertest'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { criarApp } from '../../server/app.js'
 import { obterPool } from '../../server/db/pool.js'
 import { abrirTransacao, desfazerTransacao, temBanco } from '../helpers/banco.js'
+
+const SENHA = 'Senha123'
 
 describe.skipIf(!temBanco())('/api/produtos', () => {
   let app
@@ -12,6 +15,12 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
   let fornecedorX
   let fornecedorY
   let idPorNome
+  let usuarioId
+  let hashSenha
+
+  beforeAll(async () => {
+    hashSenha = await bcrypt.hash(SENHA, 4)
+  })
 
   const criarCategoria = async (nome) => {
     const { rows } = await obterPool().query(
@@ -40,9 +49,23 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
     return rows[0].id
   }
 
+  const logar = async () => {
+    const cliente = request.agent(app)
+    await cliente.post('/api/auth/login').send({ email: 'produtos.teste@exemplo.com', senha: SENHA })
+    return cliente
+  }
+
   beforeEach(async () => {
     await abrirTransacao()
     app = criarApp()
+
+    const { rows } = await obterPool().query(
+      `insert into public.usuarios (nome, email, senha_hash, papel)
+       values ('Operador Teste', 'produtos.teste@exemplo.com', $1, 'OPERADOR')
+       returning id`,
+      [hashSenha],
+    )
+    usuarioId = rows[0].id
 
     categoriaRacao = await criarCategoria('Ração Teste')
     categoriaHigiene = await criarCategoria('Higiene Teste')
@@ -204,5 +227,140 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
 
     expect(resposta.status).toBe(422)
     expect(resposta.body.erro.codigo).toBe('VALIDACAO')
+  })
+
+  const criarViaApi = (cliente, corpo) => cliente.post('/api/produtos').send(corpo)
+
+  it('cria produto sem estoque inicial e nao gera movimentacao', async () => {
+    const cliente = await logar()
+
+    const resposta = await criarViaApi(cliente, {
+      nome: 'Coleira Ajustável G',
+      categoriaId: categoriaHigiene,
+      fornecedorId: fornecedorY,
+      precoVenda: 39.9,
+    })
+
+    expect(resposta.status).toBe(201)
+    expect(resposta.body.dados).toMatchObject({
+      nome: 'Coleira Ajustável G',
+      categoria: { id: categoriaHigiene, nome: 'Higiene Teste' },
+      fornecedor: { id: fornecedorY, nome: 'Fornecedor Y' },
+      precoVenda: 39.9,
+      quantidadeAtual: 0,
+      estoqueMinimo: 0,
+      statusEstoque: 'SEM_ESTOQUE',
+      ativo: true,
+    })
+
+    const { rows } = await obterPool().query(
+      'select count(*)::int as n from public.movimentacoes where produto_id = $1',
+      [resposta.body.dados.id],
+    )
+    expect(rows[0].n).toBe(0)
+  })
+
+  it('cria produto com estoque inicial e gera a movimentacao ENTRADA/ESTOQUE_INICIAL com o usuario da sessao', async () => {
+    const cliente = await logar()
+
+    const resposta = await criarViaApi(cliente, {
+      nome: 'Ração Adulto Sabor Carne',
+      categoriaId: categoriaRacao,
+      precoVenda: 120,
+      estoqueInicial: 15,
+      estoqueMinimo: 5,
+    })
+
+    expect(resposta.status).toBe(201)
+    expect(resposta.body.dados.quantidadeAtual).toBe(15)
+    expect(resposta.body.dados.fornecedor).toBeNull()
+
+    const { rows } = await obterPool().query(
+      `select produto_id, usuario_id, tipo, motivo, quantidade,
+              saldo_anterior, saldo_posterior, preco_unitario::float8 as preco_unitario
+         from public.movimentacoes where produto_id = $1`,
+      [resposta.body.dados.id],
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      usuario_id: usuarioId,
+      tipo: 'ENTRADA',
+      motivo: 'ESTOQUE_INICIAL',
+      quantidade: 15,
+      saldo_anterior: 0,
+      saldo_posterior: 15,
+      preco_unitario: 120,
+    })
+  })
+
+  it('recusa nome duplicado de produto ativo com 409 NOME_DUPLICADO', async () => {
+    const cliente = await logar()
+    const corpo = {
+      nome: 'Ração Premium Cães Adultos', // ja existe, criado no beforeEach
+      categoriaId: categoriaRacao,
+      precoVenda: 50,
+    }
+
+    const resposta = await criarViaApi(cliente, corpo)
+
+    expect(resposta.status).toBe(409)
+    expect(resposta.body.erro.codigo).toBe('NOME_DUPLICADO')
+    expect(resposta.body.erro.campos.nome).toBeDefined()
+  })
+
+  it('permite nome duplicado quando confirmarNomeDuplicado e true', async () => {
+    const cliente = await logar()
+
+    const resposta = await criarViaApi(cliente, {
+      nome: 'Ração Premium Cães Adultos',
+      categoriaId: categoriaRacao,
+      precoVenda: 50,
+      confirmarNomeDuplicado: true,
+    })
+
+    expect(resposta.status).toBe(201)
+  })
+
+  it('nao exige confirmacao quando o produto de mesmo nome esta inativo', async () => {
+    await obterPool().query('update public.produtos set ativo = false where id = $1', [
+      idPorNome['Ração Premium Cães Adultos'],
+    ])
+    const cliente = await logar()
+
+    const resposta = await criarViaApi(cliente, {
+      nome: 'Ração Premium Cães Adultos',
+      categoriaId: categoriaRacao,
+      precoVenda: 50,
+    })
+
+    expect(resposta.status).toBe(201)
+  })
+
+  it('recusa campo obrigatorio vazio ou numero negativo com 422', async () => {
+    const cliente = await logar()
+    const base = { nome: 'Produto Válido', categoriaId: categoriaRacao, precoVenda: 10 }
+
+    const semNome = await criarViaApi(cliente, { ...base, nome: '' })
+    expect(semNome.status).toBe(422)
+    expect(semNome.body.erro.campos.nome).toBeDefined()
+
+    const precoNegativo = await criarViaApi(cliente, { ...base, precoVenda: -1 })
+    expect(precoNegativo.status).toBe(422)
+    expect(precoNegativo.body.erro.campos.precoVenda).toBeDefined()
+
+    const estoqueNegativo = await criarViaApi(cliente, { ...base, estoqueInicial: -5 })
+    expect(estoqueNegativo.status).toBe(422)
+    expect(estoqueNegativo.body.erro.campos.estoqueInicial).toBeDefined()
+  })
+
+  it('recusa criar produto sem sessao com 401', async () => {
+    const resposta = await request(app).post('/api/produtos').send({
+      nome: 'Sem Sessão',
+      categoriaId: categoriaRacao,
+      precoVenda: 10,
+    })
+
+    expect(resposta.status).toBe(401)
+    expect(resposta.body.erro.codigo).toBe('NAO_AUTENTICADO')
   })
 })
