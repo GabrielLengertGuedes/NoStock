@@ -11,11 +11,14 @@ import { EstadoVazio } from '../components/EstadoVazio.jsx'
 import { Layout } from '../components/Layout.jsx'
 import { Modal } from '../components/Modal.jsx'
 import { Tabela } from '../components/Tabela.jsx'
+import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
 
 const VAZIA = { nome: '', descricao: '' }
 
 export function Categorias() {
+  const { temPapel } = useAuth()
+  const podeEditar = temPapel('GESTOR')
   const menu = useMenuPrincipal()
   const consulta = useCategorias()
   const criar = useCriarCategoria()
@@ -61,14 +64,16 @@ export function Categorias() {
       titulo: 'Ações',
       alinhamento: 'right',
       render: (categoria) => (
-        <div className="flex gap-sm" style={{ justifyContent: 'flex-end' }}>
-          <button type="button" className="btn btn-secondary" onClick={() => abrirFormulario(categoria)}>
-            Editar
-          </button>
-          <button type="button" className="btn btn-danger" onClick={() => setAInativar(categoria)}>
-            Inativar
-          </button>
-        </div>
+        podeEditar ? (
+          <div className="flex gap-sm" style={{ justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => abrirFormulario(categoria)}>
+              Editar
+            </button>
+            <button type="button" className="btn btn-danger" onClick={() => setAInativar(categoria)}>
+              Inativar
+            </button>
+          </div>
+        ) : null
       ),
     },
   ]
@@ -77,11 +82,11 @@ export function Categorias() {
     <Layout
       titulo="Categorias"
       menu={menu}
-      acoes={
+      acoes={podeEditar ? (
         <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
           Nova categoria
         </button>
-      }
+      ) : null}
     >
       {consulta.isError && (
         <p className="campo-erro text-body" role="alert">
@@ -97,11 +102,11 @@ export function Categorias() {
           <EstadoVazio
             titulo="Nenhuma categoria cadastrada"
             descricao="As categorias organizam o catálogo por tipo de produto."
-            acao={
+            acao={podeEditar ? (
               <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
                 Cadastrar a primeira
               </button>
-            }
+            ) : null}
           />
         }
       />

@@ -1,25 +1,87 @@
+import bcrypt from 'bcrypt'
 import request from 'supertest'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { criarApp } from '../../server/app.js'
+import { obterPool } from '../../server/db/pool.js'
 import { abrirTransacao, desfazerTransacao, temBanco } from '../helpers/banco.js'
 
 const NOME = 'Fornecedor Teste'
 const CNPJ_VALIDO = '19.980.203/0001-10'
 const CNPJ_VALIDO_LIMPO = '19980203000110'
 const CNPJ_INVALIDO = '19.980.203/0001-11' // digito errado
+const SENHA = 'Senha123'
 
 describe.skipIf(!temBanco())('/api/fornecedores', () => {
   let app
+  let cliente
+  let hashSenha
+
+  beforeAll(async () => {
+    hashSenha = await bcrypt.hash(SENHA, 4)
+  })
 
   beforeEach(async () => {
     await abrirTransacao()
     app = criarApp()
+    await obterPool().query(
+      `insert into usuarios (nome, email, senha_hash, papel, ativo)
+       values ($1, $2, $3, 'GESTOR', true), ($4, $5, $3, 'OPERADOR', true)`,
+      [
+        'Gestor Fornecedores',
+        'teste.fornecedores.gestor@exemplo.com',
+        hashSenha,
+        'Operador Fornecedores',
+        'teste.fornecedores.operador@exemplo.com',
+      ],
+    )
+    cliente = request.agent(app)
+    await cliente.post('/api/auth/login').send({
+      email: 'teste.fornecedores.gestor@exemplo.com',
+      senha: SENHA,
+    })
   })
 
   afterEach(desfazerTransacao)
 
-  const criar = (corpo) => request(app).post('/api/fornecedores').send(corpo)
+  const criar = (corpo) => cliente.post('/api/fornecedores').send(corpo)
+
+  it('recusa leitura sem sessao com 401', async () => {
+    const resposta = await request(app).get('/api/fornecedores')
+
+    expect(resposta.status).toBe(401)
+    expect(resposta.body.erro.codigo).toBe('NAO_AUTENTICADO')
+  })
+
+  it('permite leitura autenticada para operador com 200', async () => {
+    const operador = request.agent(app)
+    await operador.post('/api/auth/login').send({
+      email: 'teste.fornecedores.operador@exemplo.com',
+      senha: SENHA,
+    })
+
+    const resposta = await operador.get('/api/fornecedores')
+
+    expect(resposta.status).toBe(200)
+    expect(resposta.body.dados).toBeInstanceOf(Array)
+  })
+
+  it('recusa escrita de operador com 403', async () => {
+    const operador = request.agent(app)
+    await operador.post('/api/auth/login').send({
+      email: 'teste.fornecedores.operador@exemplo.com',
+      senha: SENHA,
+    })
+
+    const criarResposta = await operador.post('/api/fornecedores').send({ nome: NOME })
+    const atualizarResposta = await operador.put('/api/fornecedores/1').send({ nome: `${NOME} atualizado` })
+    const inativarResposta = await operador.delete('/api/fornecedores/1')
+
+    expect(criarResposta.status).toBe(403)
+    expect(atualizarResposta.status).toBe(403)
+    expect(inativarResposta.status).toBe(403)
+    expect(criarResposta.body.erro.codigo).toBe('SEM_PERMISSAO')
+  })
 
   it('cria e devolve 201 com o fornecedor e limpa CNPJ', async () => {
     const resposta = await criar({ nome: NOME, cnpj: CNPJ_VALIDO, observacao: 'Fornecedor A' })
@@ -75,7 +137,7 @@ describe.skipIf(!temBanco())('/api/fornecedores', () => {
       ['Produto Ativo', categoriaId, fornecedorId, 10.0]
     )
 
-    const resposta = await request(app).delete(`/api/fornecedores/${fornecedorId}`)
+    const resposta = await cliente.delete(`/api/fornecedores/${fornecedorId}`)
     expect(resposta.status).toBe(400)
     expect(resposta.body.erro.codigo).toBe('REGRA_NEGOCIO')
   })
@@ -99,7 +161,7 @@ describe.skipIf(!temBanco())('/api/fornecedores', () => {
       ['Produto 2', categoriaId, fornecedorId, 20.0, 3]
     )
 
-    const resposta = await request(app).get('/api/fornecedores')
+    const resposta = await cliente.get('/api/fornecedores')
     expect(resposta.status).toBe(200)
 
     const fornecedor = resposta.body.dados.find((f) => f.id === fornecedorId)
