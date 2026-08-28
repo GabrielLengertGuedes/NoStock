@@ -387,7 +387,53 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
       fornecedor: { id: fornecedorX, nome: 'Fornecedor X' },
       precoVenda: 45,
       estoqueMinimo: 8,
+      quantidadeAtual: 3, // CA6.1: o saldo nao muda so por editar cadastro
     })
+  })
+
+  it('recusa renomear um produto para o nome de outro produto ativo (409 NOME_DUPLICADO)', async () => {
+    const cliente = await logar()
+    const id = idPorNome['Shampoo Neutro Pet']
+
+    const resposta = await atualizarViaApi(cliente, id, {
+      nome: 'Ração Premium Cães Adultos', // ja existe, ativo
+      categoriaId: categoriaHigiene,
+      precoVenda: 10,
+      estoqueMinimo: 10,
+    })
+
+    expect(resposta.status).toBe(409)
+    expect(resposta.body.erro.codigo).toBe('NOME_DUPLICADO')
+    expect(resposta.body.erro.campos.nome).toBeDefined()
+  })
+
+  it('permite renomear para nome duplicado quando confirmarNomeDuplicado e true', async () => {
+    const cliente = await logar()
+    const id = idPorNome['Shampoo Neutro Pet']
+
+    const resposta = await atualizarViaApi(cliente, id, {
+      nome: 'Ração Premium Cães Adultos',
+      categoriaId: categoriaHigiene,
+      precoVenda: 10,
+      estoqueMinimo: 10,
+      confirmarNomeDuplicado: true,
+    })
+
+    expect(resposta.status).toBe(200)
+  })
+
+  it('reenviar o proprio nome no PUT nao acusa duplicidade contra si mesmo', async () => {
+    const cliente = await logar()
+    const id = idPorNome['Shampoo Neutro Pet']
+
+    const resposta = await atualizarViaApi(cliente, id, {
+      nome: 'Shampoo Neutro Pet', // mesmo nome que ja tinha
+      categoriaId: categoriaHigiene,
+      precoVenda: 10,
+      estoqueMinimo: 10,
+    })
+
+    expect(resposta.status).toBe(200)
   })
 
   it('recusa alterar quantidadeAtual pelo PUT com 422', async () => {
@@ -479,5 +525,22 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
     const resposta = await gestor.post(`/api/produtos/${idPorNome['Brinquedo Corda Resistente']}/reativar`)
     expect(resposta.status).toBe(400)
     expect(resposta.body.erro.codigo).toBe('REGRA_NEGOCIO')
+  })
+
+  it('recusa reativar produto cujo nome ja foi reusado por outro produto ativo (409 NOME_DUPLICADO)', async () => {
+    const gestor = await logar('GESTOR')
+    const id = idPorNome['Brinquedo Corda Resistente']
+
+    await gestor.delete(`/api/produtos/${id}`)
+    // o nome esta livre porque o original ficou inativo - nao precisa confirmar
+    await criarViaApi(gestor, {
+      nome: 'Brinquedo Corda Resistente',
+      categoriaId: categoriaHigiene,
+      precoVenda: 20,
+    })
+
+    const resposta = await gestor.post(`/api/produtos/${id}/reativar`)
+    expect(resposta.status).toBe(409)
+    expect(resposta.body.erro.codigo).toBe('NOME_DUPLICADO')
   })
 })

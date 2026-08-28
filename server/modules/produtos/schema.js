@@ -68,6 +68,7 @@ export const corpoDeAtualizacao = z
     fornecedorId,
     precoVenda,
     estoqueMinimo: z.number().int().nonnegative('Não pode ser negativo'),
+    confirmarNomeDuplicado: z.boolean().optional().default(false),
     quantidadeAtual: z.unknown().optional(),
   })
   .superRefine((dados, ctx) => {
