@@ -11,3 +11,17 @@ export async function criar(req, res) {
   })
   res.status(201).json({ dados: produto })
 }
+
+export async function atualizar(req, res) {
+  res.json({ dados: await servico.atualizar(req.validado.params.id, req.validado.body) })
+}
+
+export async function inativar(req, res) {
+  await servico.inativar(req.validado.params.id)
+  res.status(204).end()
+}
+
+export async function reativar(req, res) {
+  await servico.reativar(req.validado.params.id)
+  res.status(204).end()
+}

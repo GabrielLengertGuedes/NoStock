@@ -103,10 +103,15 @@ export async function buscarPorId(id, conexao = obterPool()) {
   return rows[0] ?? null
 }
 
-export async function existeAtivoComMesmoNome(nome, conexao = obterPool()) {
+// excluirId existe para a atualizacao: o proprio produto nao pode contar como
+// duplicata do seu nome atual quando ele so esta sendo resalvo sem mudar nada.
+export async function existeAtivoComMesmoNome({ nome, excluirId }, conexao = obterPool()) {
+  const condicaoId = excluirId ? 'and id != $2' : ''
+  const valores = excluirId ? [nome, excluirId] : [nome]
+
   const { rows } = await conexao.query(
-    `select 1 from public.produtos where nome = $1 and ativo limit 1`,
-    [nome],
+    `select 1 from public.produtos where nome = $1 and ativo ${condicaoId} limit 1`,
+    valores,
   )
   return rows.length > 0
 }
@@ -142,4 +147,33 @@ export async function registrarEstoqueInicial(
      values ($1, $2, 'ENTRADA', 'ESTOQUE_INICIAL', $3, 0, $3, $4)`,
     [produtoId, usuarioId, quantidade, precoVenda],
   )
+}
+
+// quantidade_atual nunca aparece aqui: o saldo so muda por movimentacao (RN02).
+export async function atualizar(id, dados, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `update public.produtos
+        set nome = $2, descricao = $3, categoria_id = $4, fornecedor_id = $5,
+            preco_venda = $6, estoque_minimo = $7
+      where id = $1
+      returning id`,
+    [id, dados.nome, dados.descricao, dados.categoriaId, dados.fornecedorId, dados.precoVenda, dados.estoqueMinimo],
+  )
+  return rows[0]?.id ?? null
+}
+
+export async function inativar(id, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `update public.produtos set ativo = false where id = $1 and ativo returning id`,
+    [id],
+  )
+  return rows[0]?.id ?? null
+}
+
+export async function reativar(id, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `update public.produtos set ativo = true where id = $1 and not ativo returning id`,
+    [id],
+  )
+  return rows[0]?.id ?? null
 }
