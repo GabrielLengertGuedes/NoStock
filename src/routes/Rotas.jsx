@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth.js'
 import { Categorias } from '../pages/Categorias.jsx'
 import { Fornecedores } from '../pages/Fornecedores.jsx'
 import { Login } from '../pages/Login.jsx'
+import { Produtos } from '../pages/Produtos.jsx'
 import { Usuarios } from '../pages/Usuarios.jsx'
 import { RotaProtegida } from './RotaProtegida.jsx'
 
@@ -34,6 +35,14 @@ export function Rotas() {
           element={
             <RotaProtegida>
               <Navigate to="/categorias" replace />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/produtos"
+          element={
+            <RotaProtegida>
+              <Produtos />
             </RotaProtegida>
           }
         />
