@@ -40,8 +40,9 @@ const FORM_VAZIO = {
 
 export function Produtos() {
   const menu = useMenuPrincipal()
-  const { temPapel } = useAuth()
-  const podeEditar = temPapel('GESTOR')
+  const { autenticado, temPapel } = useAuth()
+  const podeEditar = autenticado
+  const podeExcluir = temPapel('GESTOR')
   const categorias = useCategorias()
   const fornecedores = useFornecedores()
   const criar = useCriarProduto()
@@ -52,6 +53,7 @@ export function Produtos() {
   const [emEdicao, setEmEdicao] = useState(null)
   const [aExcluir, setAExcluir] = useState(null)
   const [formulario, setFormulario] = useState(FORM_VAZIO)
+  const [confirmarDuplicado, setConfirmarDuplicado] = useState(false)
 
   // Trocar qualquer filtro volta pra pagina 1, senao a pagina atual pode nem
   // existir mais no resultado novo.
@@ -62,6 +64,7 @@ export function Produtos() {
   function abrirFormulario(produto) {
     criar.reset()
     atualizar.reset()
+    setConfirmarDuplicado(false)
     setEmEdicao(produto ?? { id: null })
     setFormulario(
       produto
@@ -78,24 +81,60 @@ export function Produtos() {
     )
   }
 
+  function montarDados() {
+    const categoriaId = formulario.categoriaId === '' ? null : Number(formulario.categoriaId)
+    const precoVenda = formulario.precoVenda === '' ? null : Number(formulario.precoVenda)
+    const estoqueMinimo = formulario.estoqueMinimo === '' ? 0 : Number(formulario.estoqueMinimo)
+    const estoqueInicial = formulario.estoqueInicial === '' ? 0 : Number(formulario.estoqueInicial)
+
+    return {
+      nome: formulario.nome,
+      descricao: formulario.descricao || null,
+      categoriaId,
+      fornecedorId: formulario.fornecedorId ? Number(formulario.fornecedorId) : null,
+      precoVenda,
+      estoqueMinimo,
+      ...(emEdicao?.id ? {} : { estoqueInicial }),
+      confirmarNomeDuplicado: confirmarDuplicado,
+    }
+  }
+
+  function fecharFormulario() {
+    setEmEdicao(null)
+    setConfirmarDuplicado(false)
+    setFormulario(FORM_VAZIO)
+  }
+
   function salvar(evento) {
     evento.preventDefault()
 
-    const dados = {
-      nome: formulario.nome,
-      descricao: formulario.descricao || null,
-      categoriaId: Number(formulario.categoriaId),
-      fornecedorId: formulario.fornecedorId ? Number(formulario.fornecedorId) : null,
-      precoVenda: Number(formulario.precoVenda),
-      estoqueMinimo: Number(formulario.estoqueMinimo || 0),
-      ...(emEdicao?.id ? {} : { estoqueInicial: Number(formulario.estoqueInicial || 0) }),
-    }
-
+    const dados = montarDados()
     const acao = emEdicao?.id
       ? atualizar.mutateAsync({ id: emEdicao.id, ...dados })
       : criar.mutateAsync(dados)
 
-    acao.then(() => setEmEdicao(null)).catch(() => {})
+    acao
+      .then(() => fecharFormulario())
+      .catch((erro) => {
+        if (erro?.codigo === 'NOME_DUPLICADO' && !confirmarDuplicado) {
+          setConfirmarDuplicado(true)
+        }
+      })
+  }
+
+  function salvarMesmoAssim() {
+    const dados = { ...montarDados(), confirmarNomeDuplicado: true }
+    const acao = emEdicao?.id
+      ? atualizar.mutateAsync({ id: emEdicao.id, ...dados })
+      : criar.mutateAsync(dados)
+
+    acao
+      .then(() => fecharFormulario())
+      .catch((erro) => {
+        if (erro?.codigo === 'NOME_DUPLICADO') {
+          setConfirmarDuplicado(true)
+        }
+      })
   }
 
   function confirmarExclusao() {
@@ -135,9 +174,11 @@ export function Produtos() {
           <button type="button" className="btn btn-secondary" onClick={() => abrirFormulario(produto)}>
             Editar
           </button>
-          <button type="button" className="btn btn-danger" onClick={() => setAExcluir(produto)}>
-            Excluir
-          </button>
+          {podeExcluir && (
+            <button type="button" className="btn btn-danger" onClick={() => setAExcluir(produto)}>
+              Excluir
+            </button>
+          )}
         </div>
       ),
     })
@@ -240,12 +281,19 @@ export function Produtos() {
         titulo={emEdicao?.id ? 'Editar produto' : 'Novo produto'}
         acoes={
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => setEmEdicao(null)}>
+            <button type="button" className="btn btn-secondary" onClick={fecharFormulario}>
               Cancelar
             </button>
-            <button type="submit" form="formulario-produto" className="btn btn-primary" disabled={salvando}>
-              {salvando ? 'Salvando…' : 'Salvar'}
-            </button>
+            {confirmarDuplicado && (
+              <button type="button" className="btn btn-primary" onClick={salvarMesmoAssim} disabled={salvando}>
+                {salvando ? 'Salvando…' : 'Salvar mesmo assim'}
+              </button>
+            )}
+            {!confirmarDuplicado && (
+              <button type="submit" form="formulario-produto" className="btn btn-primary" disabled={salvando}>
+                {salvando ? 'Salvando…' : 'Salvar'}
+              </button>
+            )}
           </>
         }
       >
@@ -273,6 +321,7 @@ export function Produtos() {
               value={formulario.categoriaId}
               onChange={(e) => setFormulario({ ...formulario, categoriaId: e.target.value })}
               aria-invalid={erroDoServidor?.campos?.categoriaId ? 'true' : undefined}
+              required
             >
               <option value="">Selecione uma categoria</option>
               {(categorias.data ?? []).map((categoria) => (
@@ -335,6 +384,11 @@ export function Produtos() {
           {erroDoServidor && !erroDoServidor.campos && (
             <p className="campo-erro text-body-sm" role="alert">
               {erroDoServidor.mensagem}
+            </p>
+          )}
+          {erroDoServidor?.codigo === 'NOME_DUPLICADO' && !confirmarDuplicado && (
+            <p className="campo-erro text-body-sm" role="alert">
+              Já existe um produto ativo com esse nome. Confirme para salvar mesmo assim.
             </p>
           )}
         </form>
