@@ -31,6 +31,19 @@ describe('corpoDeRegistro', () => {
     expect(resultado.success).toBe(true)
   })
 
+  it('rejeita ajuste sem observacao (RN03)', () => {
+    const resultado = corpoDeRegistro.safeParse({
+      produtoId: 1,
+      tipo: 'AJUSTE',
+      motivo: 'AJUSTE_INVENTARIO',
+      quantidade: 5,
+    })
+    expect(resultado.success).toBe(false)
+    if (!resultado.success) {
+      expect(resultado.error.issues.some((i) => i.path[0] === 'observacao')).toBe(true)
+    }
+  })
+
   it('rejeita estoque inicial pela API', () => {
     const resultado = corpoDeRegistro.safeParse({
       produtoId: 1,
