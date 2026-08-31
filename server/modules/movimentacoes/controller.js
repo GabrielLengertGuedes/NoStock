@@ -16,3 +16,7 @@ export async function registrar(req, res) {
 
   res.status(201).json({ dados: movimentacao })
 }
+
+export async function listar(req, res) {
+  res.json(await servico.listar(req.validado.query))
+}

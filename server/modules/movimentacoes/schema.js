@@ -74,3 +74,34 @@ export const corpoDeRegistro = z
       })
     }
   })
+
+const dataIso = z
+  .string()
+  .optional()
+  .superRefine((valor, ctx) => {
+    if (valor && Number.isNaN(Date.parse(valor))) {
+      ctx.addIssue({ code: 'custom', message: 'Data inválida' })
+    }
+  })
+  .transform((valor) => (valor ? new Date(valor) : undefined))
+
+export const filtrosDeListagem = z
+  .object({
+    produtoId: z.coerce.number().int().positive().optional(),
+    usuarioId: z.coerce.number().int().positive().optional(),
+    tipo: z.enum(TIPOS).optional(),
+    motivo: z.enum(MOTIVOS).optional(),
+    de: dataIso,
+    ate: dataIso,
+    pagina: z.coerce.number().int().positive().optional().default(1),
+    porPagina: z.coerce.number().int().positive().max(100).optional().default(20),
+  })
+  .superRefine((dados, ctx) => {
+    if (dados.de && dados.ate && dados.de > dados.ate) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ate'],
+        message: 'O fim do período deve ser posterior ao início',
+      })
+    }
+  })

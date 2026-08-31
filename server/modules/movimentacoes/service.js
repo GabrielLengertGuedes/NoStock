@@ -98,3 +98,26 @@ export async function registrar({ produtoId, tipo, motivo, quantidade, observaca
   const movimentacao = await repositorio.buscarPorId(id)
   return formatarResposta(movimentacao)
 }
+
+export async function listar(filtros) {
+  const { pagina = 1, porPagina = 20 } = filtros
+  const { movimentacoes, total } = await repositorio.listar(filtros)
+
+  return {
+    dados: movimentacoes,
+    meta: {
+      pagina,
+      porPagina,
+      total,
+      totalPaginas: Math.ceil(total / porPagina),
+    },
+  }
+}
+
+export async function listarPorProduto(produtoId, filtros) {
+  if (!(await repositorio.produtoExiste(produtoId))) {
+    throw produtoNaoEncontrado()
+  }
+
+  return listar({ ...filtros, produtoId })
+}

@@ -1,4 +1,5 @@
 import * as servico from './service.js'
+import * as servicoMovimentacoes from '../movimentacoes/service.js'
 
 export async function listar(req, res) {
   res.json(await servico.listar(req.validado.query))
@@ -24,4 +25,10 @@ export async function inativar(req, res) {
 export async function reativar(req, res) {
   await servico.reativar(req.validado.params.id)
   res.status(204).end()
+}
+
+export async function listarMovimentacoes(req, res) {
+  res.json(
+    await servicoMovimentacoes.listarPorProduto(req.validado.params.id, req.validado.query),
+  )
 }
