@@ -15,6 +15,7 @@ import { errorHandler } from './middlewares/errorHandler.js'
 import { rotas as auth } from './modules/auth/routes.js'
 import { rotas as categorias } from './modules/categorias/routes.js'
 import { rotas as fornecedores } from './modules/fornecedores/routes.js'
+import { rotas as movimentacoes } from './modules/movimentacoes/routes.js'
 import { rotas as produtos } from './modules/produtos/routes.js'
 import { rotas as usuarios } from './modules/usuarios/routes.js'
 import { AppError } from './shared/AppError.js'
@@ -70,6 +71,7 @@ export function criarApp() {
   app.use('/api/categorias', categorias)
   app.use('/api/fornecedores', fornecedores)
   app.use('/api/produtos', produtos)
+  app.use('/api/movimentacoes', movimentacoes)
 
   app.use('/api', (_req, _res, next) => {
     next(new AppError('NAO_ENCONTRADO', 'Rota inexistente.'))
