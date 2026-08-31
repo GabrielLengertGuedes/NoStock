@@ -64,11 +64,6 @@ describe.skipIf(!temBanco())('F2-05 — saldo nunca negativo (RN01, CA5.2)', () 
     return rows[0].n
   }
 
-  const auditoriaSemSaldoNegativo = async () => {
-    const auditoria = await auditoriaDoProduto(produtoId)
-    return auditoria.saldoNegativo
-  }
-
   const saida = (quantidade) =>
     servico.registrar({
       produtoId,
@@ -87,7 +82,7 @@ describe.skipIf(!temBanco())('F2-05 — saldo nunca negativo (RN01, CA5.2)', () 
 
     expect(await saldoAtual()).toBe(2)
     expect(await totalMovimentacoes()).toBe(0)
-    expect(await auditoriaSemSaldoNegativo()).toEqual([])
+    expect(semProblemas(await auditoriaDoProduto(produtoId))).toBe(true)
   })
 
   it('CA5.2 — rejeita saida maior que o saldo e mantém o estoque intacto (API)', async () => {
@@ -117,7 +112,7 @@ describe.skipIf(!temBanco())('F2-05 — saldo nunca negativo (RN01, CA5.2)', () 
     expect(movimentacao.saldoPosterior).toBe(0)
     expect(movimentacao.statusEstoqueResultante).toBe('SEM_ESTOQUE')
     expect(await saldoAtual()).toBe(0)
-    expect(await auditoriaSemSaldoNegativo()).toEqual([])
+    expect(semProblemas(await auditoriaDoProduto(produtoId))).toBe(true)
   })
 
   it('com saldo zero, qualquer saida é rejeitada', async () => {
@@ -154,6 +149,6 @@ describe.skipIf(!temBanco())('F2-05 — saldo nunca negativo (RN01, CA5.2)', () 
 
     expect(await saldoAtual()).toBe(5)
     expect(await totalMovimentacoes()).toBe(1)
-    expect(await auditoriaSemSaldoNegativo()).toEqual([])
+    expect(semProblemas(await auditoriaDoProduto(produtoId))).toBe(true)
   })
 })
