@@ -4,26 +4,38 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { definirPool, obterPool } from '../../server/db/pool.js'
 import * as servico from '../../server/modules/movimentacoes/service.js'
 import { auditoriaDoProduto, semProblemas } from '../helpers/integridade.js'
+import { removerCenarios, removerSobrasAntigas } from '../helpers/limpeza.js'
 import { temBanco } from '../helpers/banco.js'
 
 // ADR-013: concorrência precisa de commits reais — dados prefixados com [teste].
+// Como o que entra aqui fica no banco compartilhado, tudo o que é criado é
+// registrado em `cenarios` e removido no afterAll.
 describe.skipIf(!temBanco())('F2-07 — concorrência em movimentações (RN11, CA5.5)', () => {
   let hashSenha
   const sufixoBase = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const cenarios = []
 
   beforeAll(async () => {
     definirPool(null)
+    await removerSobrasAntigas()
     hashSenha = await bcrypt.hash('Senha123', 4)
   }, 30_000)
 
-  afterAll(() => {
+  // Roda mesmo quando um teste falha: a sobra não pode depender do resultado.
+  afterAll(async () => {
     definirPool(null)
     obterPool()
-  })
+    await removerCenarios(cenarios)
+  }, 30_000)
 
   async function criarCenario(rotulo) {
     const pool = obterPool()
     const sufixo = `${sufixoBase}-${rotulo}`
+
+    // Entra na lista antes dos inserts: se um deles falhar no meio, o que já
+    // tinha entrado sai junto na limpeza.
+    const cenario = {}
+    cenarios.push(cenario)
 
     const { rows: usuarios } = await pool.query(
       `insert into public.usuarios (nome, email, senha_hash, papel)
@@ -31,11 +43,13 @@ describe.skipIf(!temBanco())('F2-07 — concorrência em movimentações (RN11, 
        returning id`,
       [`Operador ${rotulo}`, `concorrencia.${sufixo}@exemplo.com`, hashSenha],
     )
+    cenario.usuarioId = usuarios[0].id
 
     const { rows: categorias } = await pool.query(
       `insert into public.categorias (nome) values ($1) returning id`,
       [`[teste] Categoria ${sufixo}`],
     )
+    cenario.categoriaId = categorias[0].id
 
     const { rows: produtos } = await pool.query(
       `insert into public.produtos
@@ -44,8 +58,9 @@ describe.skipIf(!temBanco())('F2-07 — concorrência em movimentações (RN11, 
        returning id`,
       [`[teste] Produto ${sufixo}`, categorias[0].id],
     )
+    cenario.produtoId = produtos[0].id
 
-    return { produtoId: produtos[0].id, usuarioId: usuarios[0].id }
+    return cenario
   }
 
   const saldoAtual = async (produtoId) => {
