@@ -79,7 +79,7 @@ describe.skipIf(!temBanco())('POST /api/movimentacoes', () => {
       saldoAnterior: 7,
       saldoPosterior: 4,
       precoUnitario: 189.9,
-      statusEstoqueResultante: 'CRITICO',
+      statusEstoqueResultante: 'BAIXO',
       usuario: { id: expect.any(Number), nome: 'Operador Mov API' },
     })
     expect(resposta.body.dados.criadoEm).toBeTruthy()
