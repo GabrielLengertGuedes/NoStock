@@ -110,7 +110,7 @@ describe.skipIf(!temBanco())('service de movimentacoes', () => {
       }),
     ).rejects.toMatchObject({
       codigo: 'SALDO_INSUFICIENTE',
-      mensagem: 'Saldo insuficiente: o produto tem 10 unidades disponíveis.',
+      message: 'Saldo insuficiente: o produto tem 10 unidades disponíveis.',
       campos: { quantidade: 'Máximo disponível: 10' },
     })
 
