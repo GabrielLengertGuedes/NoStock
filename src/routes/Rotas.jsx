@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { useAuth } from '../hooks/useAuth.js'
 import { Categorias } from '../pages/Categorias.jsx'
+import { Dashboard } from '../pages/Dashboard.jsx'
 import { Fornecedores } from '../pages/Fornecedores.jsx'
 import { Login } from '../pages/Login.jsx'
 import { Produtos } from '../pages/Produtos.jsx'
@@ -34,7 +35,15 @@ export function Rotas() {
           path="/"
           element={
             <RotaProtegida>
-              <Navigate to="/categorias" replace />
+              <Navigate to="/dashboard" replace />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <RotaProtegida>
+              <Dashboard />
             </RotaProtegida>
           }
         />

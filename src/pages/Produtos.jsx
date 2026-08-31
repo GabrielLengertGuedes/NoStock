@@ -13,6 +13,7 @@ import { Campo } from '../components/Campo.jsx'
 import { EstadoVazio } from '../components/EstadoVazio.jsx'
 import { Layout } from '../components/Layout.jsx'
 import { Modal } from '../components/Modal.jsx'
+import { ModalMovimentacao } from '../components/ModalMovimentacao.jsx'
 import { Paginacao } from '../components/Paginacao.jsx'
 import { Tabela } from '../components/Tabela.jsx'
 import { useAuth } from '../hooks/useAuth.js'
@@ -52,6 +53,7 @@ export function Produtos() {
   const [filtros, setFiltros] = useState(FILTROS_VAZIOS)
   const [emEdicao, setEmEdicao] = useState(null)
   const [aExcluir, setAExcluir] = useState(null)
+  const [movimentacao, setMovimentacao] = useState(null)
   const [formulario, setFormulario] = useState(FORM_VAZIO)
   const [confirmarDuplicado, setConfirmarDuplicado] = useState(false)
 
@@ -171,6 +173,20 @@ export function Produtos() {
       alinhamento: 'right',
       render: (produto) => (
         <div className="flex gap-sm" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-accent"
+            onClick={() => setMovimentacao({ tipo: 'ENTRADA', produto })}
+          >
+            Entrada
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setMovimentacao({ tipo: 'SAIDA', produto })}
+          >
+            Saída
+          </button>
           <button type="button" className="btn btn-secondary" onClick={() => abrirFormulario(produto)}>
             Editar
           </button>
@@ -393,6 +409,15 @@ export function Produtos() {
           )}
         </form>
       </Modal>
+
+      {movimentacao && (
+        <ModalMovimentacao
+          aberto
+          tipo={movimentacao.tipo}
+          produtoInicial={movimentacao.produto}
+          aoFechar={() => setMovimentacao(null)}
+        />
+      )}
 
       <Modal
         aberto={aExcluir !== null}

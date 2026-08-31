@@ -69,6 +69,8 @@ describe('Produtos', () => {
     expect(html).toContain('Produtos')
     expect(html).toContain('Novo produto')
     expect(html).toContain('Ração Premium')
+    expect(html).toContain('Entrada')
+    expect(html).toContain('Saída')
     expect(html).toContain('Editar')
     expect(html).toContain('Excluir')
   })
@@ -90,6 +92,8 @@ describe('Produtos', () => {
     const tbody = html.match(/<tbody>([\s\S]*?)<\/tbody>/)?.[1] ?? ''
 
     expect(html).toContain('Novo produto')
+    expect(tbody).toContain('Entrada')
+    expect(tbody).toContain('Saída')
     expect(tbody).toContain('Editar')
     expect(tbody).not.toContain('Excluir')
   })
