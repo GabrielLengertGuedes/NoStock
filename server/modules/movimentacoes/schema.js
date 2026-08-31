@@ -56,6 +56,13 @@ export const corpoDeRegistro = z
           message: 'Não pode ser negativo',
         })
       }
+      if (!dados.observacao?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['observacao'],
+          message: 'Informe o motivo do ajuste',
+        })
+      }
       return
     }
 
