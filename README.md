@@ -91,6 +91,23 @@ Abra o endereço do `web` no navegador. Para parar tudo, `Ctrl+C` no terminal.
 
 Se precisar subir só um lado, existem `npm run dev:api` e `npm run dev:web`.
 
+### Não rode a suíte inteira o tempo todo
+
+`npm test` leva de **1 a 3 minutos**, e quase tudo é espera de rede: o banco está na nuvem, cada
+ida e volta custa uns 120 ms, e o tempo varia bastante com a sua conexão — medimos 49 s, 55 s e
+75 s na mesma máquina, na mesma tarde. Não é problema de ter teste demais; é a distância até o
+Supabase. Enquanto você programa, rode só o que interessa:
+
+| Quando | Comando | Leva |
+|---|---|---|
+| Mexendo em regra pura, componente, schema | `npm run test:unit` | **~1 s** (39 testes, nem toca no banco) |
+| Mexendo em um módulo | `npx vitest run tests/integration/categorias.test.js` | **~13 s** |
+| Deixar rodando enquanto edita | `npm run test:watch` | Reexecuta sozinho ao salvar |
+| Antes de abrir a PR | `npm test` | 1–3 min |
+
+A suíte inteira é responsabilidade da CI, que roda a cada PR sem consumir o seu tempo. Rodar
+tudo a cada `Ctrl+S` é o que faz o teste parecer caro.
+
 **Não existe comando que crie, apague ou recarregue o banco — de propósito.** O banco é um só e
 é compartilhado: um comando desses apagaria o trabalho de cinco pessoas. Mudança na estrutura do
 banco entra como arquivo novo em `db/migrations/`, aplicado à mão e avisado no grupo.
