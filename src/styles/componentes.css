@@ -89,6 +89,23 @@
   color: var(--gray);
 }
 
+.dashboard-atalhos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-base);
+}
+
+.dashboard-atalhos-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.dashboard-atalhos-botoes .btn {
+  min-width: 12rem;
+}
+
 .layout-titulo {
   display: flex;
   align-items: center;

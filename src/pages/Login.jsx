@@ -9,7 +9,7 @@ export function Login({ modo = 'pagina' }) {
   const { autenticado, login, avisoSessao, limparAvisoSessao, loginExigido } = useAuth()
   const navegar = useNavigate()
   const localizacao = useLocation()
-  const destino = localizacao.state?.from?.pathname || '/categorias'
+  const destino = localizacao.state?.from?.pathname || '/dashboard'
 
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
