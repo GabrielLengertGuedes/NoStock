@@ -11,6 +11,8 @@
     "dev:api": "node --watch server/index.js",
     "dev:web": "vite",
     "test": "vitest run --passWithNoTests",
+    "test:unit": "vitest run tests/unit",
+    "test:watch": "vitest",
     "backup": "node scripts/backup.js",
     "build": "vite build",
     "lint": "eslint .",

@@ -11,6 +11,10 @@ let profundidade = 0
 // Converte o begin/commit/rollback do codigo em savepoint, para a transacao
 // externa do teste continuar de pe ate o fim.
 function encaminhar(texto, valores) {
+  if (!cliente) {
+    return Promise.reject(new Error('cliente de teste indisponível'))
+  }
+
   const sql = typeof texto === 'string' ? texto.trim().toLowerCase() : ''
 
   if (sql === 'begin') {
@@ -29,6 +33,8 @@ function encaminhar(texto, valores) {
 // Abre uma transacao e faz a API usar este mesmo cliente. Nada do que o teste
 // escrever chega ao banco de verdade: o desfazer no fim apaga tudo.
 export async function abrirTransacao() {
+  await desfazerTransacao()
+
   cliente = new pg.Client({
     connectionString: obterEnv().databaseUrl,
     ssl: { rejectUnauthorized: false },
@@ -57,6 +63,7 @@ export async function desfazerTransacao() {
 
   const atual = cliente
   cliente = null
+  profundidade = 0
 
   try {
     await atual.query('rollback')
