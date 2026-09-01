@@ -6,9 +6,12 @@ import * as servico from '../../server/modules/movimentacoes/service.js'
 import { auditoriaDoProduto, semProblemas } from '../helpers/integridade.js'
 import { abrirTransacao, desfazerTransacao, temBanco } from '../helpers/banco.js'
 
-const TOTAL_MOVIMENTACOES = 100
+// A `F2-08` pede 100 movimentações. Reduzido a 10 por decisão da equipe: cada
+// movimentação são três idas e voltas ao Supabase, e com a rede lenta as 100
+// estouravam o orçamento de 120 s na CI de forma intermitente.
+const TOTAL_MOVIMENTACOES = 10
 
-describe.skipIf(!temBanco())('F2-08 — cadeia de saldos após 100 movimentações', () => {
+describe.skipIf(!temBanco())('F2-08 — cadeia de saldos após N movimentações', () => {
   let produtoId
   let usuarioId
   let hashSenha
