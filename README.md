@@ -93,10 +93,11 @@ Se precisar subir só um lado, existem `npm run dev:api` e `npm run dev:web`.
 
 ### Não rode a suíte inteira o tempo todo
 
-`npm test` leva de **1 a 3 minutos**, e quase tudo é espera de rede: o banco está na nuvem, cada
-ida e volta custa uns 120 ms, e o tempo varia bastante com a sua conexão — medimos 49 s, 55 s e
-75 s na mesma máquina, na mesma tarde. Não é problema de ter teste demais; é a distância até o
-Supabase. Enquanto você programa, rode só o que interessa:
+`npm test` leva de **1 a 3 minutos**, e quase tudo é espera de rede. A suíte dispara 2.471
+consultas, e o banco gasta **1,6 s** executando todas elas — o resto do tempo é o pacote indo e
+voltando até a nuvem. Por isso varia tanto com a sua conexão: medimos a mesma suíte em 49 s, 78 s
+e 75 s na mesma máquina. Não é problema de ter teste demais; é a distância até o Supabase.
+Enquanto você programa, rode só o que interessa:
 
 | Quando | Comando | Leva |
 |---|---|---|
