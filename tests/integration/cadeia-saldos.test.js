@@ -6,11 +6,14 @@ import * as servico from '../../server/modules/movimentacoes/service.js'
 import { auditoriaDoProduto, semProblemas } from '../helpers/integridade.js'
 import { abrirTransacao, desfazerTransacao, temBanco } from '../helpers/banco.js'
 
-// Cada movimentação são seis idas e voltas ao Supabase, uma esperando a outra.
-// Com 100, o teste passava dos 120 s de limite na CI quando a rede ficava lenta.
-const TOTAL_MOVIMENTACOES = 10
+// 100 é o número que a F2-08 pede como critério de aceite: baixar daqui exige
+// mudar a tarefa junto. Já esteve em 10 por um tempo, porque cada movimentação
+// são seis idas e voltas ao banco, uma esperando a outra, e contra o Supabase
+// isso passava dos 120 s de limite na CI quando a rede ficava lenta. Com o
+// banco dentro do runner a ida e volta é local e as 100 voltaram a caber.
+const TOTAL_MOVIMENTACOES = 100
 
-describe.skipIf(!temBanco())('F2-08 — cadeia de saldos após N movimentações', () => {
+describe.skipIf(!temBanco())('F2-08 — cadeia de saldos após 100 movimentações', () => {
   let produtoId
   let usuarioId
   let hashSenha
