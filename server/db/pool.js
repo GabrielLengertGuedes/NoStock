@@ -3,6 +3,15 @@ import { obterEnv } from '../config/env.js'
 
 let pool = null
 
+// O Supabase usa cadeia propria: cifra a conexao, mas nao valida o certificado.
+// Um Postgres local — o contêiner do CI, por exemplo — nao oferece TLS, e exigir
+// SSL contra ele derruba a conexao. Decidir pela propria URL evita mais uma
+// variavel de ambiente para alguem esquecer de configurar.
+export function sslDoBanco(url) {
+  const local = /@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(url) || /sslmode=disable/.test(url)
+  return local ? false : { rejectUnauthorized: false }
+}
+
 export function obterPool() {
   if (pool) return pool
 
@@ -10,8 +19,7 @@ export function obterPool() {
 
   pool = new pg.Pool({
     connectionString: env.databaseUrl,
-    // O Supabase usa cadeia propria: cifra a conexao, mas nao valida o certificado.
-    ssl: { rejectUnauthorized: false },
+    ssl: sslDoBanco(env.databaseUrl),
     max: 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
