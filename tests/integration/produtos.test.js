@@ -114,9 +114,18 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
     })
   })
 
-  afterEach(desfazerTransacao)
+  afterEach(async () => {
+    clienteDaListagem = null
+    await desfazerTransacao()
+  })
 
-  const listar = (query = '') => request(app).get(`/api/produtos${query}`)
+  // A listagem exige sessao como as demais; um cliente logado por teste basta,
+  // e ele cai junto com o rollback da transacao.
+  let clienteDaListagem = null
+  const listar = async (query = '') => {
+    clienteDaListagem ??= await logar()
+    return clienteDaListagem.get(`/api/produtos${query}`)
+  }
 
   it('acha o mesmo produto buscando sem acento, em qualquer caixa', async () => {
     for (const termo of ['racao', 'Ração', 'RAÇÃO', 'RACAO']) {
@@ -353,6 +362,13 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
     const estoqueNegativo = await criarViaApi(cliente, { ...base, estoqueInicial: -5 })
     expect(estoqueNegativo.status).toBe(422)
     expect(estoqueNegativo.body.erro.campos.estoqueInicial).toBeDefined()
+  })
+
+  it('recusa listar produtos sem sessao com 401', async () => {
+    const resposta = await request(app).get('/api/produtos')
+
+    expect(resposta.status).toBe(401)
+    expect(resposta.body.erro.codigo).toBe('NAO_AUTENTICADO')
   })
 
   it('recusa criar produto sem sessao com 401', async () => {

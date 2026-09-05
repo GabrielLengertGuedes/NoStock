@@ -10,7 +10,7 @@ export const rotas = Router()
 
 const soGestor = [requireAuth, requireRole('GESTOR')]
 
-rotas.get('/', validate({ query: filtrosDeListagem }), controlador.listar)
+rotas.get('/', requireAuth, validate({ query: filtrosDeListagem }), controlador.listar)
 rotas.get(
   '/:id/movimentacoes',
   requireAuth,
