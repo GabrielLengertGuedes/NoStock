@@ -113,6 +113,12 @@ tudo a cada `Ctrl+S` é o que faz o teste parecer caro.
 é compartilhado: um comando desses apagaria o trabalho de cinco pessoas. Mudança na estrutura do
 banco entra como arquivo novo em `db/migrations/`, aplicado à mão e avisado no grupo.
 
+> **Mexeu na estrutura do banco? A mudança tem que virar migração versionada.**
+> O CI reconstrói um banco do zero a cada Pull Request, aplicando `db/schema.sql` e depois cada
+> arquivo de `db/migrations/`. Se você alterar o Supabase pelo SQL editor e não deixar a
+> migração na mesma PR, o banco do CI fica com a estrutura antiga: os testes passam contra um
+> banco que não existe mais. Detalhes em [`db/migrations/README.md`](db/migrations/README.md).
+
 ---
 
 ## Quando algo dá errado
