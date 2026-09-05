@@ -1,7 +1,7 @@
 import pg from 'pg'
 
 import { obterEnv } from '../../server/config/env.js'
-import { definirPool } from '../../server/db/pool.js'
+import { definirPool, sslDoBanco } from '../../server/db/pool.js'
 
 export const temBanco = () => Boolean(process.env.DATABASE_URL)
 
@@ -35,10 +35,8 @@ function encaminhar(texto, valores) {
 export async function abrirTransacao() {
   await desfazerTransacao()
 
-  cliente = new pg.Client({
-    connectionString: obterEnv().databaseUrl,
-    ssl: { rejectUnauthorized: false },
-  })
+  const url = obterEnv().databaseUrl
+  cliente = new pg.Client({ connectionString: url, ssl: sslDoBanco(url) })
 
   await cliente.connect()
   await cliente.query('begin')

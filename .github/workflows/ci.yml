@@ -7,6 +7,27 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    # O banco roda dentro do próprio runner. A suíte dispara 2.471 consultas e o
+    # banco gasta 1,6 s executando todas — o resto do tempo do CI era o pacote
+    # indo e voltando até o Supabase. Aqui a ida e volta é local.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nostock
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/nostock
+
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js 20.x
@@ -18,15 +39,15 @@ jobs:
         run: npm install
       - name: Run lint
         run: npm run lint --if-present
-      - name: Conferir se o banco esta configurado
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      # O schema.sql não é alterado: o bootstrap cria só o que o Supabase já
+      # oferece de fábrica (schema `extensions`, papéis `anon`/`authenticated`).
+      - name: Preparar o banco do CI
         run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "::warning::DATABASE_URL ausente nos secrets — os testes de integracao vao ser pulados."
-          fi
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f db/ci-bootstrap.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f db/schema.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f db/seed.sql
+          psql "$DATABASE_URL" -c "select count(*) as categorias_base from public.categorias"
 
       - name: Run tests
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm test
