@@ -28,6 +28,12 @@ export function criarApp() {
   const app = express()
 
   app.disable('x-powered-by')
+
+  // Em producao a app fica atras do proxy HTTPS do painel. Sem confiar nele,
+  // req.secure e false, o express-session engole o Set-Cookie do cookie
+  // `secure` e ninguem consegue entrar.
+  if (env.producao) app.set('trust proxy', 1)
+
   app.use(helmet())
 
   // Em producao o front sai da propria API, entao nao ha origem cruzada.
