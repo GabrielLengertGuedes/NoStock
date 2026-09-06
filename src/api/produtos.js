@@ -64,6 +64,8 @@ export function useValorInventario() {
     },
   })
 }
+
+function useAoConcluir() {
   const cliente = useQueryClient()
   return () => cliente.invalidateQueries({ queryKey: CHAVE })
 }

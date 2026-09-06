@@ -1,18 +1,25 @@
-import { ICONES_NAV } from '../components/IconesBioma.jsx'
+import {
+  IconeCategorias,
+  IconeDashboard,
+  IconeFornecedores,
+  IconeMovimentacoes,
+  IconeProdutos,
+  IconeUsuarios,
+} from '../components/IconesBioma.jsx'
 import { useAuth } from './useAuth.js'
 
 export function useMenuPrincipal() {
   const { temPapel } = useAuth()
 
   const itens = [
-    { para: '/dashboard', rotulo: 'Dashboard', Icone: ICONES_NAV['/dashboard'] },
-    { para: '/produtos', rotulo: 'Produtos', Icone: ICONES_NAV['/produtos'] },
-    { para: '/categorias', rotulo: 'Categorias', Icone: ICONES_NAV['/categorias'] },
-    { para: '/fornecedores', rotulo: 'Fornecedores', Icone: ICONES_NAV['/fornecedores'] },
-    { para: '/movimentacoes', rotulo: 'Movimentações', Icone: ICONES_NAV['/movimentacoes'] },
+    { para: '/dashboard', rotulo: 'Dashboard', Icone: IconeDashboard },
+    { para: '/produtos', rotulo: 'Produtos', Icone: IconeProdutos },
+    { para: '/categorias', rotulo: 'Categorias', Icone: IconeCategorias },
+    { para: '/fornecedores', rotulo: 'Fornecedores', Icone: IconeFornecedores },
+    { para: '/movimentacoes', rotulo: 'Movimentações', Icone: IconeMovimentacoes },
   ]
   if (temPapel('GESTOR')) {
-    itens.push({ para: '/usuarios', rotulo: 'Usuários', Icone: ICONES_NAV['/usuarios'] })
+    itens.push({ para: '/usuarios', rotulo: 'Usuários', Icone: IconeUsuarios })
   }
   return itens
 }

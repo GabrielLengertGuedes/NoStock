@@ -208,19 +208,10 @@ export function IconeToy(props) {
   )
 }
 
-export const ICONES_NAV = {
-  '/dashboard': IconeDashboard,
-  '/produtos': IconeProdutos,
-  '/categorias': IconeCategorias,
-  '/fornecedores': IconeFornecedores,
-  '/movimentacoes': IconeMovimentacoes,
-  '/usuarios': IconeUsuarios,
-}
-
-export function iconeCategoria(categoria = '') {
+export function IconeCategoria({ categoria = '', ...props }) {
   const t = categoria.toLowerCase()
-  if (/ração|racao|alimento|pet food|comida/.test(t)) return IconeBone
-  if (/higiene|shampoo|limpeza|banho/.test(t)) return IconeDroplet
-  if (/brinquedo|toy|bola/.test(t)) return IconeToy
-  return IconeProdutos
+  if (/ração|racao|alimento|pet food|comida/.test(t)) return <IconeBone {...props} />
+  if (/higiene|shampoo|limpeza|banho/.test(t)) return <IconeDroplet {...props} />
+  if (/brinquedo|toy|bola/.test(t)) return <IconeToy {...props} />
+  return <IconeProdutos {...props} />
 }

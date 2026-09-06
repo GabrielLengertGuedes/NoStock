@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { useCategorias } from '../api/categorias.js'
@@ -27,6 +27,18 @@ const FORM_VAZIO = {
   estoqueMinimo: '0',
 }
 
+function camposDoProduto(produto) {
+  return {
+    nome: produto.nome ?? '',
+    descricao: produto.descricao ?? '',
+    categoriaId: produto.categoria?.id ?? '',
+    fornecedorId: produto.fornecedor?.id ?? '',
+    precoVenda: produto.precoVenda ?? '',
+    estoqueInicial: '',
+    estoqueMinimo: String(produto.estoqueMinimo ?? 0),
+  }
+}
+
 export function ProdutoFormulario() {
   const { id } = useParams()
   const editando = Boolean(id)
@@ -38,38 +50,29 @@ export function ProdutoFormulario() {
   const produtoConsulta = useProduto(editando ? id : null)
   const criar = useCriarProduto()
   const atualizar = useAtualizarProduto()
-
-  const [formulario, setFormulario] = useState(FORM_VAZIO)
-  const [confirmarDuplicado, setConfirmarDuplicado] = useState(false)
-  const [pronto, setPronto] = useState(!editando)
-  const [midiaUrl, setMidiaUrl] = useState(null)
+  const produto = produtoConsulta.data
   const idMidia = editando ? id : 'novo'
 
-  useEffect(() => {
+  const [formulario, setFormulario] = useState(FORM_VAZIO)
+  const [rascunhoDe, setRascunhoDe] = useState(null)
+  const [confirmarDuplicado, setConfirmarDuplicado] = useState(false)
+  const [midiaUrl, setMidiaUrl] = useState(() => lerMidiaLocal(idMidia))
+  const [midiaDe, setMidiaDe] = useState(idMidia)
+
+  if (midiaDe !== idMidia) {
+    setMidiaDe(idMidia)
     setMidiaUrl(lerMidiaLocal(idMidia))
-  }, [idMidia])
+  }
 
-  useEffect(() => {
-    if (!editando) {
-      setFormulario(FORM_VAZIO)
-      setPronto(true)
-      return
-    }
+  if (!editando && rascunhoDe !== 'novo') {
+    setRascunhoDe('novo')
+    setFormulario(FORM_VAZIO)
+  }
 
-    const produto = produtoConsulta.data
-    if (!produto) return
-
-    setFormulario({
-      nome: produto.nome ?? '',
-      descricao: produto.descricao ?? '',
-      categoriaId: produto.categoria?.id ?? '',
-      fornecedorId: produto.fornecedor?.id ?? '',
-      precoVenda: produto.precoVenda ?? '',
-      estoqueInicial: '',
-      estoqueMinimo: String(produto.estoqueMinimo ?? 0),
-    })
-    setPronto(true)
-  }, [editando, produtoConsulta.data])
+  if (editando && produto && rascunhoDe !== produto.id) {
+    setRascunhoDe(produto.id)
+    setFormulario(camposDoProduto(produto))
+  }
 
   if (!autenticado) return null
 
@@ -77,7 +80,7 @@ export function ProdutoFormulario() {
   const erroDoServidor = criar.error ?? atualizar.error
   const categoriaNome =
     (categorias.data ?? []).find((c) => String(c.id) === String(formulario.categoriaId))?.nome ??
-    produtoConsulta.data?.categoria?.nome ??
+    produto?.categoria?.nome ??
     ''
 
   function montarDados(forcarDuplicado = false) {
@@ -331,7 +334,7 @@ export function ProdutoFormulario() {
                 </button>
               )}
               {!confirmarDuplicado && (
-                <button type="submit" className="btn btn-primary" disabled={salvando || !pronto}>
+                <button type="submit" className="btn btn-primary" disabled={salvando}>
                   {salvando ? 'Salvando…' : 'Salvar produto'}
                 </button>
               )}
@@ -350,7 +353,12 @@ export function ProdutoFormulario() {
           </div>
 
           <div className="produto-form-preview-card">
-            <ProdutoThumb id={editando ? id : null} nome={formulario.nome || 'P'} categoria={categoriaNome} />
+            <ProdutoThumb
+              id={editando ? id : 'novo'}
+              nome={formulario.nome || 'P'}
+              categoria={categoriaNome}
+              foto={midiaUrl}
+            />
             <div>
               <p className="produto-nome">{formulario.nome || 'Nome do produto'}</p>
               <p className="produto-meta">
@@ -384,15 +392,15 @@ export function ProdutoFormulario() {
             )}
           </div>
 
-          {editando && produtoConsulta.data && (
+          {editando && produto && (
             <dl className="produto-form-meta">
               <div>
                 <dt>Saldo atual</dt>
-                <dd>{produtoConsulta.data.quantidadeAtual} un.</dd>
+                <dd>{produto.quantidadeAtual} un.</dd>
               </div>
               <div>
                 <dt>Mínimo</dt>
-                <dd>{produtoConsulta.data.estoqueMinimo} un.</dd>
+                <dd>{produto.estoqueMinimo} un.</dd>
               </div>
             </dl>
           )}
