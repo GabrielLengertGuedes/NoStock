@@ -8,9 +8,12 @@ import {
 } from '../api/fornecedores.js'
 import { Campo } from '../components/Campo.jsx'
 import { EstadoVazio } from '../components/EstadoVazio.jsx'
+import { IconeAlerta, IconeFornecedores, IconeProdutos } from '../components/IconesBioma.jsx'
+import { KpiCard } from '../components/KpiCard.jsx'
 import { Layout } from '../components/Layout.jsx'
+import { MenuAcoes } from '../components/MenuAcoes.jsx'
 import { Modal } from '../components/Modal.jsx'
-import { Tabela } from '../components/Tabela.jsx'
+import { ProdutoThumb } from '../components/ProdutoThumb.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
 
@@ -78,68 +81,117 @@ export function Fornecedores() {
     inativar.mutateAsync(aInativar.id).then(() => setAInativar(null)).catch(() => {})
   }
 
-  const colunas = [
-    { chave: 'nome', titulo: 'Nome' },
-    { chave: 'cnpj', titulo: 'CNPJ', render: (f) => formatarCnpj(f.cnpj) },
-    { chave: 'contato', titulo: 'Contato', render: (f) => f.contato_nome ?? '—' },
-    { chave: 'telefone', titulo: 'Telefone', render: (f) => f.telefone ?? '—' },
-    { chave: 'totalProdutos', titulo: 'Produtos', alinhamento: 'right', render: (f) => f.totalProdutos ?? 0 },
-    {
-      chave: 'acoes',
-      titulo: 'Ações',
-      alinhamento: 'right',
-      render: (fornecedor) => (
-        podeEditar ? (
-          <div className="flex gap-sm" style={{ justifyContent: 'flex-end' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => abrirFormulario(fornecedor)}>
-              Editar
-            </button>
-            <button type="button" className="btn btn-danger" onClick={() => setAInativar(fornecedor)}>
-              Inativar
-            </button>
-          </div>
-        ) : null
-      ),
-    },
-  ].filter((coluna) => podeEditar || coluna.chave !== 'acoes')
+  const lista = consulta.data ?? []
 
   return (
     <Layout
       titulo="Fornecedores"
+      subtitulo="Contatos e vínculos dos produtos do estoque."
       menu={menu}
-      acoes={podeEditar ? (
-        <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
-          Novo fornecedor
-        </button>
-      ) : null}
+      acoes={
+        podeEditar ? (
+          <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
+            Novo fornecedor
+          </button>
+        ) : null
+      }
     >
+      <section className="kpi-grid kpi-grid-3" aria-label="Resumo de fornecedores">
+        <KpiCard
+          tom="neutro"
+          Icone={IconeFornecedores}
+          rotulo="Fornecedores ativos"
+          valor={lista.length}
+          meta={<span className="kpi-pill kpi-pill-ok">Cadastro</span>}
+        />
+        <KpiCard
+          tom="mint"
+          Icone={IconeProdutos}
+          rotulo="Produtos vinculados"
+          valor={lista.reduce((acc, f) => acc + (f.totalProdutos ?? 0), 0)}
+          meta="No catálogo"
+        />
+        <KpiCard
+          tom="alerta"
+          Icone={IconeAlerta}
+          rotulo="Sem produtos"
+          valor={lista.filter((f) => !(f.totalProdutos > 0)).length}
+          meta="Podem ser revisados"
+        />
+      </section>
+
       {consulta.isError && (
         <p className="campo-erro text-body" role="alert">
           {consulta.error.mensagem}
         </p>
       )}
 
-      <Tabela
-        colunas={colunas}
-        dados={consulta.data ?? []}
-        carregando={consulta.isPending}
-        vazio={
-          <EstadoVazio
-            titulo="Nenhum fornecedor cadastrado"
-            descricao="Cadastre fornecedores para associá-los aos produtos do catálogo."
-            acao={podeEditar ? (
+      {consulta.isPending ? (
+        <p className="text-body" style={{ color: 'var(--gray)' }}>
+          Carregando fornecedores…
+        </p>
+      ) : lista.length === 0 ? (
+        <EstadoVazio
+          titulo="Nenhum fornecedor cadastrado"
+          descricao="Cadastre fornecedores para associá-los aos produtos do catálogo."
+          acao={
+            podeEditar ? (
               <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
                 Cadastrar o primeiro
               </button>
-            ) : null}
-          />
-        }
-      />
+            ) : null
+          }
+        />
+      ) : (
+        <section className="catalogo-grid" aria-label="Lista de fornecedores">
+          {lista.map((fornecedor) => (
+            <article key={fornecedor.id} className="catalogo-card">
+              <div className="catalogo-card-topo">
+                <ProdutoThumb nome={fornecedor.nome} categoria={fornecedor.nome} />
+                {podeEditar ? (
+                  <MenuAcoes
+                    rotulo={`Ações de ${fornecedor.nome}`}
+                    itens={[
+                      { rotulo: 'Editar', onClick: () => abrirFormulario(fornecedor) },
+                      { rotulo: 'Inativar', onClick: () => setAInativar(fornecedor), perigo: true },
+                    ]}
+                  />
+                ) : null}
+              </div>
+              <h3>{fornecedor.nome}</h3>
+              <p className="sku-codigo">{formatarCnpj(fornecedor.cnpj)}</p>
+              <div className="catalogo-contato">
+                <span>{fornecedor.contato_nome || 'Sem contato'}</span>
+                {fornecedor.telefone ? (
+                  <a href={`tel:${fornecedor.telefone}`}>{fornecedor.telefone}</a>
+                ) : (
+                  <span>—</span>
+                )}
+                {fornecedor.email ? (
+                  <a href={`mailto:${fornecedor.email}`}>{fornecedor.email}</a>
+                ) : null}
+              </div>
+              <dl className="catalogo-card-meta">
+                <div>
+                  <dt>Produtos</dt>
+                  <dd>{fornecedor.totalProdutos ?? 0}</dd>
+                </div>
+                <div>
+                  <dt>E-mail</dt>
+                  <dd style={{ fontFamily: 'inherit', fontSize: 12 }}>{fornecedor.email || '—'}</dd>
+                </div>
+              </dl>
+            </article>
+          ))}
+        </section>
+      )}
 
       <Modal
         aberto={emEdicao !== null}
         aoFechar={() => setEmEdicao(null)}
         titulo={emEdicao?.id ? 'Editar fornecedor' : 'Novo fornecedor'}
+        subtitulo="Contato e vínculo para o catálogo."
+        tamanho="lg"
         acoes={
           <>
             <button type="button" className="btn btn-secondary" onClick={() => setEmEdicao(null)}>
@@ -151,7 +203,7 @@ export function Fornecedores() {
           </>
         }
       >
-        <form id="formulario-fornecedor" onSubmit={salvar} className="modal-corpo">
+        <form id="formulario-fornecedor" onSubmit={salvar} className="modal-corpo produto-form-campos">
           <Campo
             id="fornecedor-nome"
             rotulo="Nome"
@@ -160,6 +212,7 @@ export function Fornecedores() {
             onChange={(e) => setFormulario({ ...formulario, nome: e.target.value })}
             erro={erroDoServidor?.campos?.nome}
           />
+          <div className="produto-form-duas-colunas">
           <Campo
             id="fornecedor-cnpj"
             rotulo="CNPJ"
@@ -176,6 +229,8 @@ export function Fornecedores() {
             onChange={(e) => setFormulario({ ...formulario, contato_nome: e.target.value })}
             erro={erroDoServidor?.campos?.contato_nome}
           />
+          </div>
+          <div className="produto-form-duas-colunas">
           <Campo
             id="fornecedor-telefone"
             rotulo="Telefone"
@@ -192,6 +247,7 @@ export function Fornecedores() {
             onChange={(e) => setFormulario({ ...formulario, email: e.target.value })}
             erro={erroDoServidor?.campos?.email}
           />
+          </div>
           <Campo
             id="fornecedor-observacao"
             rotulo="Observação"
@@ -212,6 +268,7 @@ export function Fornecedores() {
         aberto={aInativar !== null}
         aoFechar={() => setAInativar(null)}
         titulo="Inativar fornecedor"
+        subtitulo="Sai das listagens; o histórico permanece."
         acoes={
           <>
             <button type="button" className="btn btn-secondary" onClick={() => setAInativar(null)}>

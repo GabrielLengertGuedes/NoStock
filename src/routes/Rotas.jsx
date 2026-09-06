@@ -6,6 +6,7 @@ import { Dashboard } from '../pages/Dashboard.jsx'
 import { Fornecedores } from '../pages/Fornecedores.jsx'
 import { Login } from '../pages/Login.jsx'
 import { Movimentacoes } from '../pages/Movimentacoes.jsx'
+import { ProdutoFormulario } from '../pages/ProdutoFormulario.jsx'
 import { Produtos } from '../pages/Produtos.jsx'
 import { Usuarios } from '../pages/Usuarios.jsx'
 import { RotaProtegida } from './RotaProtegida.jsx'
@@ -53,6 +54,22 @@ export function Rotas() {
           element={
             <RotaProtegida>
               <Produtos />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/produtos/novo"
+          element={
+            <RotaProtegida>
+              <ProdutoFormulario />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/produtos/:id/editar"
+          element={
+            <RotaProtegida>
+              <ProdutoFormulario />
             </RotaProtegida>
           }
         />

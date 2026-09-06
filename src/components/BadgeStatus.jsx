@@ -1,12 +1,10 @@
 const ESTADOS = {
-  NORMAL: { rotulo: 'Normal', classe: 'badge-status-normal' },
-  BAIXO: { rotulo: 'Baixo', classe: 'badge-status-baixo' },
-  CRITICO: { rotulo: 'Crítico', classe: 'badge-status-critico' },
-  SEM_ESTOQUE: { rotulo: 'Sem estoque', classe: 'badge-status-sem-estoque' },
+  NORMAL: { rotulo: 'OK', classe: 'badge-status-normal' },
+  BAIXO: { rotulo: 'ATENÇÃO', classe: 'badge-status-baixo' },
+  CRITICO: { rotulo: 'CRÍTICO', classe: 'badge-status-critico' },
+  SEM_ESTOQUE: { rotulo: 'SEM ESTOQUE', classe: 'badge-status-sem-estoque' },
 }
 
-// A cor nunca e a unica pista: o rotulo em texto vai junto, e SEM_ESTOQUE tem
-// preenchimento solido para se distinguir de CRITICO tambem no formato.
 export function BadgeStatus({ status }) {
   const estado = ESTADOS[status]
 
@@ -14,5 +12,5 @@ export function BadgeStatus({ status }) {
     return <span className="badge badge-info">{status ?? '—'}</span>
   }
 
-  return <span className={`badge ${estado.classe}`}>{estado.rotulo}</span>
+  return <span className={`badge-status ${estado.classe}`}>{estado.rotulo}</span>
 }
