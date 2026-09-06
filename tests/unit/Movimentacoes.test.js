@@ -90,9 +90,12 @@ describe('Movimentacoes', () => {
     perfilAtual = 'GESTOR'
     const html = renderizar()
 
-    for (const coluna of ['Data', 'Hora', 'Tipo', 'Motivo', 'Produto', 'Quantidade', 'Responsável']) {
+    for (const coluna of ['Quando', 'Tipo', 'Motivo', 'Produto', 'Quantidade', 'Responsável']) {
       expect(html).toContain(`>${coluna}</th>`)
     }
+
+    expect(html).toContain('Registrar entrada')
+    expect(html).toContain('Registrar saída')
 
     expect(html).toContain('Ração Premium')
     expect(html).toContain('Saída')

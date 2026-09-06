@@ -8,9 +8,13 @@ import {
   useRedefinirSenhaUsuario,
   useUsuarios,
 } from '../api/usuarios.js'
+import { AvatarIniciais } from '../components/AvatarIniciais.jsx'
 import { Campo } from '../components/Campo.jsx'
 import { EstadoVazio } from '../components/EstadoVazio.jsx'
+import { IconeUsuarios } from '../components/IconesBioma.jsx'
+import { KpiCard } from '../components/KpiCard.jsx'
 import { Layout } from '../components/Layout.jsx'
+import { MenuAcoes } from '../components/MenuAcoes.jsx'
 import { Modal } from '../components/Modal.jsx'
 import { Tabela } from '../components/Tabela.jsx'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
@@ -89,62 +93,72 @@ export function Usuarios() {
   }
 
   const colunas = [
-    { chave: 'nome', titulo: 'Nome' },
-    { chave: 'email', titulo: 'E-mail' },
+    {
+      chave: 'nome',
+      titulo: 'Pessoa',
+      render: (usuario) => (
+        <div className="produto-celula">
+          <AvatarIniciais nome={usuario.nome} />
+          <div>
+            <p className="produto-nome">{usuario.nome}</p>
+            <p className="produto-meta">{usuario.email}</p>
+          </div>
+        </div>
+      ),
+    },
     {
       chave: 'papel',
       titulo: 'Papel',
-      render: (usuario) => rotuloPapel(usuario.papel),
+      render: (usuario) => (
+        <span className={`chip-papel${usuario.papel === 'GESTOR' ? ' chip-papel-gestor' : ''}`}>
+          {rotuloPapel(usuario.papel)}
+        </span>
+      ),
     },
     {
       chave: 'ativo',
       titulo: 'Status',
-      render: (usuario) => (usuario.ativo ? 'Ativo' : 'Inativo'),
+      render: (usuario) => (
+        <span className={`chip-status ${usuario.ativo ? 'chip-status-ativo' : 'chip-status-inativo'}`}>
+          {usuario.ativo ? 'Ativo' : 'Inativo'}
+        </span>
+      ),
     },
     {
       chave: 'acoes',
-      titulo: 'Ações',
+      titulo: '',
       alinhamento: 'right',
-      render: (usuario) => (
-        <div className="flex gap-sm" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          {usuario.ativo ? (
-            <>
-              <button type="button" className="btn btn-secondary" onClick={() => abrirFormulario(usuario)}>
-                Editar
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
+      render: (usuario) => {
+        const itens = usuario.ativo
+          ? [
+              { rotulo: 'Editar', onClick: () => abrirFormulario(usuario) },
+              {
+                rotulo: 'Redefinir senha',
+                onClick: () => {
                   redefinirSenha.reset()
                   setSenhaNova('')
                   setARedefinir(usuario)
-                }}
-              >
-                Senha
-              </button>
-              <button type="button" className="btn btn-danger" onClick={() => setAInativar(usuario)}>
-                Inativar
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => reativar.mutate(usuario.id)}
-              disabled={reativar.isPending}
-            >
-              Reativar
-            </button>
-          )}
-        </div>
-      ),
+                },
+              },
+              { rotulo: 'Inativar', onClick: () => setAInativar(usuario), perigo: true },
+            ]
+          : [
+              {
+                rotulo: 'Reativar',
+                onClick: () => reativar.mutate(usuario.id),
+              },
+            ]
+        return <MenuAcoes rotulo={`Ações de ${usuario.nome}`} itens={itens} />
+      },
     },
   ]
+
+  const lista = consulta.data ?? []
 
   return (
     <Layout
       titulo="Usuários"
+      subtitulo="Gerencie acessos de operadores e gestores."
       menu={menu}
       acoes={
         <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
@@ -152,22 +166,44 @@ export function Usuarios() {
         </button>
       }
     >
-      <div className="flex gap-sm mb-base" style={{ flexWrap: 'wrap' }}>
-        {[
-          { valor: 'true', rotulo: 'Ativos' },
-          { valor: 'false', rotulo: 'Inativos' },
-          { valor: 'todos', rotulo: 'Todos' },
-        ].map((opcao) => (
-          <button
-            key={opcao.valor}
-            type="button"
-            className={filtroAtivo === opcao.valor ? 'btn btn-primary' : 'btn btn-secondary'}
-            onClick={() => setFiltroAtivo(opcao.valor)}
-            aria-pressed={filtroAtivo === opcao.valor}
-          >
-            {opcao.rotulo}
-          </button>
-        ))}
+
+      <section className="kpi-grid kpi-grid-3" aria-label="Resumo da equipe">
+        <KpiCard tom="neutro" Icone={IconeUsuarios} rotulo="Na lista" valor={lista.length} meta="Filtro atual" />
+        <KpiCard
+          tom="mint"
+          Icone={IconeUsuarios}
+          rotulo="Gestores"
+          valor={lista.filter((u) => u.papel === 'GESTOR').length}
+          meta="Acesso total"
+        />
+        <KpiCard
+          tom="alerta"
+          Icone={IconeUsuarios}
+          rotulo="Operadores"
+          valor={lista.filter((u) => u.papel === 'OPERADOR').length}
+          meta="Operação do estoque"
+        />
+      </section>
+
+      <div className="filtros-linha">
+        <div className="segmented" role="tablist" aria-label="Filtro de status de usuários">
+          {[
+            { valor: 'true', rotulo: 'Ativos' },
+            { valor: 'false', rotulo: 'Inativos' },
+            { valor: 'todos', rotulo: 'Todos' },
+          ].map((opcao) => (
+            <button
+              key={opcao.valor}
+              type="button"
+              role="tab"
+              aria-selected={filtroAtivo === opcao.valor}
+              className={`segmented-btn${filtroAtivo === opcao.valor ? ' segmented-btn-ativo' : ''}`}
+              onClick={() => setFiltroAtivo(opcao.valor)}
+            >
+              {opcao.rotulo}
+            </button>
+          ))}
+        </div>
       </div>
 
       {consulta.isError && (
@@ -182,27 +218,38 @@ export function Usuarios() {
         </p>
       )}
 
-      <Tabela
-        colunas={colunas}
-        dados={consulta.data ?? []}
-        carregando={consulta.isPending}
-        vazio={
-          <EstadoVazio
-            titulo="Nenhum usuário neste filtro"
-            descricao="Cadastre operadores e gestores para a equipe da loja."
-            acao={
-              <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
-                Cadastrar o primeiro
-              </button>
-            }
-          />
-        }
-      />
+      <section className="painel">
+        <div className="painel-cabecalho">
+          <div>
+            <h2 className="text-h3">Equipe da loja</h2>
+            <p className="text-body-sm" style={{ color: 'var(--gray)' }}>
+              Gestores e operadores com acesso ao NoStock.
+            </p>
+          </div>
+        </div>
+        <Tabela
+          colunas={colunas}
+          dados={lista}
+          carregando={consulta.isPending}
+          vazio={
+            <EstadoVazio
+              titulo="Nenhum usuário neste filtro"
+              descricao="Cadastre operadores e gestores para a equipe da loja."
+              acao={
+                <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
+                  Cadastrar o primeiro
+                </button>
+              }
+            />
+          }
+        />
+      </section>
 
       <Modal
         aberto={emEdicao !== null}
         aoFechar={() => setEmEdicao(null)}
         titulo={emEdicao?.id ? 'Editar usuário' : 'Novo usuário'}
+        subtitulo="Contas internas — só gestores cadastram a equipe."
         acoes={
           <>
             <button type="button" className="btn btn-secondary" onClick={() => setEmEdicao(null)}>
@@ -268,6 +315,7 @@ export function Usuarios() {
         aberto={aInativar !== null}
         aoFechar={() => setAInativar(null)}
         titulo="Inativar usuário"
+        subtitulo="O acesso é bloqueado; o histórico permanece."
         acoes={
           <>
             <button type="button" className="btn btn-secondary" onClick={() => setAInativar(null)}>
@@ -302,6 +350,7 @@ export function Usuarios() {
           setSenhaNova('')
         }}
         titulo="Redefinir senha"
+        subtitulo={aRedefinir ? `Nova senha para ${aRedefinir.nome}.` : undefined}
         acoes={
           <>
             <button

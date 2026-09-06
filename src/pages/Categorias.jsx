@@ -8,9 +8,12 @@ import {
 } from '../api/categorias.js'
 import { Campo } from '../components/Campo.jsx'
 import { EstadoVazio } from '../components/EstadoVazio.jsx'
+import { IconeCategorias, IconeProdutos } from '../components/IconesBioma.jsx'
+import { KpiCard } from '../components/KpiCard.jsx'
 import { Layout } from '../components/Layout.jsx'
+import { MenuAcoes } from '../components/MenuAcoes.jsx'
 import { Modal } from '../components/Modal.jsx'
-import { Tabela } from '../components/Tabela.jsx'
+import { ProdutoThumb } from '../components/ProdutoThumb.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
 
@@ -54,67 +57,113 @@ export function Categorias() {
     inativar.mutateAsync(aInativar.id).then(() => setAInativar(null)).catch(() => {})
   }
 
-  const colunas = [
-    { chave: 'nome', titulo: 'Nome' },
-    { chave: 'descricao', titulo: 'Descrição', render: (c) => c.descricao ?? '—' },
-    { chave: 'totalProdutos', titulo: 'Produtos', alinhamento: 'right', render: (c) => c.totalProdutos ?? 0 },
-    { chave: 'unidadesEmEstoque', titulo: 'Em Estoque', alinhamento: 'right', render: (c) => c.unidadesEmEstoque ?? 0 },
-    {
-      chave: 'acoes',
-      titulo: 'Ações',
-      alinhamento: 'right',
-      render: (categoria) => (
-        podeEditar ? (
-          <div className="flex gap-sm" style={{ justifyContent: 'flex-end' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => abrirFormulario(categoria)}>
-              Editar
-            </button>
-            <button type="button" className="btn btn-danger" onClick={() => setAInativar(categoria)}>
-              Inativar
-            </button>
-          </div>
-        ) : null
-      ),
-    },
-  ]
+  const lista = consulta.data ?? []
+  const totalUnidades = lista.reduce((acc, c) => acc + (c.unidadesEmEstoque ?? 0), 0)
 
   return (
     <Layout
       titulo="Categorias"
+      subtitulo="Organize o catálogo por grupos de produtos."
       menu={menu}
-      acoes={podeEditar ? (
-        <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
-          Nova categoria
-        </button>
-      ) : null}
+      acoes={
+        podeEditar ? (
+          <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
+            Nova categoria
+          </button>
+        ) : null
+      }
     >
+      <section className="kpi-grid kpi-grid-3" aria-label="Resumo de categorias">
+        <KpiCard
+          tom="neutro"
+          Icone={IconeCategorias}
+          rotulo="Categorias ativas"
+          valor={lista.length}
+          meta={<span className="kpi-pill kpi-pill-ok">Catálogo</span>}
+        />
+        <KpiCard
+          tom="mint"
+          Icone={IconeProdutos}
+          rotulo="Unidades em estoque"
+          valor={totalUnidades}
+          meta="Soma das categorias"
+        />
+        <KpiCard
+          tom="alerta"
+          Icone={IconeProdutos}
+          rotulo="Produtos vinculados"
+          valor={lista.reduce((acc, c) => acc + (c.totalProdutos ?? 0), 0)}
+          meta="No catálogo ativo"
+        />
+      </section>
+
       {consulta.isError && (
         <p className="campo-erro text-body" role="alert">
           {consulta.error.mensagem}
         </p>
       )}
 
-      <Tabela
-        colunas={colunas}
-        dados={consulta.data ?? []}
-        carregando={consulta.isPending}
-        vazio={
-          <EstadoVazio
-            titulo="Nenhuma categoria cadastrada"
-            descricao="As categorias organizam o catálogo por tipo de produto."
-            acao={podeEditar ? (
+      {consulta.isPending ? (
+        <p className="text-body" style={{ color: 'var(--gray)' }}>
+          Carregando categorias…
+        </p>
+      ) : lista.length === 0 ? (
+        <EstadoVazio
+          titulo="Nenhuma categoria cadastrada"
+          descricao="As categorias organizam o catálogo por tipo de produto."
+          acao={
+            podeEditar ? (
               <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
                 Cadastrar a primeira
               </button>
-            ) : null}
-          />
-        }
-      />
+            ) : null
+          }
+        />
+      ) : (
+        <section className="catalogo-grid" aria-label="Lista de categorias">
+          {lista.map((categoria) => (
+            <article key={categoria.id} className="catalogo-card">
+              <div className="catalogo-card-topo">
+                <ProdutoThumb nome={categoria.nome} categoria={categoria.nome} />
+                {podeEditar ? (
+                  <MenuAcoes
+                    rotulo={`Ações de ${categoria.nome}`}
+                    itens={[
+                      { rotulo: 'Editar', onClick: () => abrirFormulario(categoria) },
+                      { rotulo: 'Inativar', onClick: () => setAInativar(categoria), perigo: true },
+                    ]}
+                  />
+                ) : null}
+              </div>
+              <h3>{categoria.nome}</h3>
+              <p className="catalogo-card-desc">{categoria.descricao || 'Sem descrição'}</p>
+              <dl className="catalogo-card-meta">
+                <div>
+                  <dt>Produtos</dt>
+                  <dd>{categoria.totalProdutos ?? 0}</dd>
+                </div>
+                <div>
+                  <dt>Em estoque</dt>
+                  <dd>{categoria.unidadesEmEstoque ?? 0}</dd>
+                </div>
+              </dl>
+              <div className="catalogo-card-barra" aria-hidden="true">
+                <span
+                  style={{
+                    width: `${Math.min(100, ((categoria.totalProdutos ?? 0) / Math.max(1, lista.reduce((acc, c) => acc + (c.totalProdutos ?? 0), 0))) * 100)}%`,
+                  }}
+                />
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
 
       <Modal
         aberto={emEdicao !== null}
         aoFechar={() => setEmEdicao(null)}
         titulo={emEdicao?.id ? 'Editar categoria' : 'Nova categoria'}
+        subtitulo="Grupos usados nos filtros e no inventário."
         acoes={
           <>
             <button type="button" className="btn btn-secondary" onClick={() => setEmEdicao(null)}>
@@ -155,6 +204,7 @@ export function Categorias() {
         aberto={aInativar !== null}
         aoFechar={() => setAInativar(null)}
         titulo="Inativar categoria"
+        subtitulo="Sai das listagens; o histórico permanece."
         acoes={
           <>
             <button type="button" className="btn btn-secondary" onClick={() => setAInativar(null)}>

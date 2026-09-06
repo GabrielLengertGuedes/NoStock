@@ -1,25 +1,58 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 
-// Usa o <dialog> do navegador: foco preso dentro, Esc fecha e fundo inerte
-// sem precisar de biblioteca.
-export function Modal({ aberto, aoFechar, titulo, children, acoes }) {
+/**
+ * Modal do sistema. Só entra no DOM quando `aberto` é true — evita dialogs
+ * “fantasma” na página. Com `showModal()`, o navegador prende o foco e o CSS
+ * centraliza na viewport.
+ */
+export function Modal({
+  aberto,
+  aoFechar,
+  titulo,
+  subtitulo,
+  children,
+  acoes,
+  tamanho = 'md',
+}) {
   const referencia = useRef(null)
+  const tituloId = useId()
 
   useEffect(() => {
-    const dialogo = referencia.current
-    if (!dialogo) return
+    if (!aberto) return undefined
 
-    if (aberto && !dialogo.open) {
+    const dialogo = referencia.current
+    if (!dialogo) return undefined
+
+    if (!dialogo.open) {
       dialogo.showModal()
-    } else if (!aberto && dialogo.open) {
-      dialogo.close()
+    }
+
+    return () => {
+      if (dialogo.open) {
+        dialogo.close()
+      }
     }
   }, [aberto])
 
+  if (!aberto) return null
+
   return (
-    <dialog ref={referencia} className="modal" onCancel={aoFechar} onClose={aoFechar}>
+    <dialog
+      ref={referencia}
+      className={`modal modal-${tamanho}`}
+      aria-labelledby={tituloId}
+      onCancel={(evento) => {
+        evento.preventDefault()
+        aoFechar()
+      }}
+    >
       <div className="modal-cabecalho">
-        <h2 className="text-h3">{titulo}</h2>
+        <div className="modal-cabecalho-texto">
+          <h2 id={tituloId} className="modal-titulo text-h3">
+            {titulo}
+          </h2>
+          {subtitulo ? <p className="modal-subtitulo">{subtitulo}</p> : null}
+        </div>
         <button type="button" className="modal-fechar" onClick={aoFechar} aria-label="Fechar">
           ×
         </button>
@@ -27,7 +60,7 @@ export function Modal({ aberto, aoFechar, titulo, children, acoes }) {
 
       <div className="modal-corpo">{children}</div>
 
-      {acoes && <div className="modal-acoes">{acoes}</div>}
+      {acoes ? <div className="modal-acoes">{acoes}</div> : null}
     </dialog>
   )
 }

@@ -70,6 +70,11 @@ export function ModalMovimentacao({ aberto, aoFechar, tipo, produtoInicial = nul
       aberto={aberto}
       aoFechar={fechar}
       titulo={titulo}
+      subtitulo={
+        tipo === 'ENTRADA'
+          ? 'Atualiza o saldo com compra ou devolução.'
+          : 'Atualiza o saldo com venda ou descarte.'
+      }
       acoes={
         resultado ? (
           <button type="button" className="btn btn-primary" onClick={fechar}>

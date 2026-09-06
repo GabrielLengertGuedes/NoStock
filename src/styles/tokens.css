@@ -1,53 +1,61 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Geist+Mono:wght@400;500;600&display=swap');
 
+/*
+ * Cores extraídas direto do Figma Bioma-PetShop
+ * frame design-system-bioma-petshop (144:6) via Plugin API / fills dos swatches.
+ * Sidebar das telas: #022c22 · nav ativo: #065F46 · botão primary: #163820
+ */
 :root {
-  /* Cores - Primary Palette */
-  --primary-dark: #163B20;
-  --primary: #2D4F35;
-  --primary-medium: #065F46;
-  --primary-deep: #064E3B;
+  --primary-dark: #163820;
+  --primary: #2d4f35;
+  --primary-medium: #065f46;
+  --primary-deep: #064e3b;
+  --sidebar: #022c22;
+  --nav-active: #065f46;
+  --logo-mint: #10b981;
 
-  /* Cores - Accent Palette */
-  --accent-mint: #6EE7B7;
-  --accent-green: #34D399;
-  --accent-light: #D1FAE5;
-  --accent-pale: #ECFDF5;
+  --accent-mint: #6ee7b7;
+  --accent-green: #34d399;
+  --accent-light: #d1fae5;
+  --accent-pale: #ecfdf5;
 
-  /* Cores - Warm Organics */
-  --warm-terra: #97472A;
-  --warm-peach: #FFD8D0;
-  --warm-rose: #FFDAD6;
-  --warm-lime: #D2E8B6;
+  --warm-terra: #97472a;
+  --warm-peach: #ffdbd0;
+  --warm-rose: #ffdad6;
+  --warm-lime: #d2ebb6;
+  --warm-leaf: #d2ebb6;
 
-  /* Cores - Neutrals */
-  --white: #FFFFFF;
-  --cream: #FBF9F4;
-  --sand: #F6F3EE;
-  --stone: #F0EEE9;
+  --white: #ffffff;
+  --cream: #fbf9f4;
+  --sand: #f5f3ee;
+  --stone: #f0eee9;
   --gray: #727971;
   --slate: #475569;
-  --dark: #0F172A;
+  --dark: #0f172a;
 
-  /* Tipografia - Font Families */
   --font-display: 'Plus Jakarta Sans', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
 
-  /* Espaçamento (Spacing) */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-base: 24px;
-  --spacing-lg: 32px;
-  --spacing-xl: 48px;
-  --spacing-2xl: 64px;
-  --spacing-3xl: 96px;
+  --spacing-md: 12px;
+  --spacing-base: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
 
-  /* Border Radius */
   --radius-subtle: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-2xl: 32px;
   --radius-circle: 999px;
+
+  --sidebar-width: 288px;
+  --content-pad-x: 40px;
+  --content-pad-y: 40px;
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(22, 56, 32, 0.06);
 }

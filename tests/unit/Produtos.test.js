@@ -34,6 +34,7 @@ vi.mock('../../src/api/produtos.js', () => ({
   useCriarProduto: () => ({ isPending: false, error: null, reset: () => {}, mutateAsync: vi.fn() }),
   useAtualizarProduto: () => ({ isPending: false, error: null, reset: () => {}, mutateAsync: vi.fn() }),
   useInativarProduto: () => ({ isPending: false, error: null, mutateAsync: vi.fn() }),
+  useValorInventario: () => ({ data: { valor: 171.6, total: 1, completo: true }, isPending: false }),
 }))
 
 vi.mock('../../src/api/categorias.js', () => ({
@@ -68,11 +69,16 @@ describe('Produtos', () => {
 
     expect(html).toContain('Produtos')
     expect(html).toContain('Novo produto')
+    expect(html).toContain('/produtos/novo')
     expect(html).toContain('Ração Premium')
-    expect(html).toContain('Entrada')
-    expect(html).toContain('Saída')
+    expect(html).toContain('BIO-RACA-0001')
+    expect(html).toContain('Valor de inventário')
+    expect(html).toContain('Registrar entrada')
+    expect(html).toContain('Registrar saída')
     expect(html).toContain('Editar')
     expect(html).toContain('Excluir')
+    expect(html).not.toContain('formulario-produto')
+    expect(html).not.toContain('<dialog')
   })
 
   it('permite criar e editar para operador, mas não excluir', () => {
@@ -92,8 +98,8 @@ describe('Produtos', () => {
     const tbody = html.match(/<tbody>([\s\S]*?)<\/tbody>/)?.[1] ?? ''
 
     expect(html).toContain('Novo produto')
-    expect(tbody).toContain('Entrada')
-    expect(tbody).toContain('Saída')
+    expect(tbody).toContain('Registrar entrada')
+    expect(tbody).toContain('Registrar saída')
     expect(tbody).toContain('Editar')
     expect(tbody).not.toContain('Excluir')
   })

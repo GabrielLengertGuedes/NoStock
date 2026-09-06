@@ -75,6 +75,7 @@ describe('Usuarios', () => {
     expect(html).toContain('Novo usuário')
     expect(html).toContain('Maria Gestora')
     expect(html).toContain('maria@exemplo.com')
+    expect(html).not.toContain('<dialog')
     expect(apiUsuarios.useUsuarios).toBeTypeOf('function')
   })
 })

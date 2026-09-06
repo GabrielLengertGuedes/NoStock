@@ -10,8 +10,37 @@ vi.mock('../../src/hooks/useAuth.js', () => ({
   useAuth: () => ({
     autenticado: true,
     temPapel: () => true,
-    usuario: { nome: 'Gestor' },
+    usuario: { nome: 'Mariana Silva', papel: 'GESTOR' },
     logout: vi.fn(),
+  }),
+}))
+
+vi.mock('../../src/api/produtos.js', () => ({
+  useProdutos: () => ({
+    data: {
+      dados: [
+        {
+          id: 1,
+          nome: 'Ração Premium',
+          categoria: { id: 1, nome: 'Ração' },
+          quantidadeAtual: 2,
+          estoqueMinimo: 5,
+          statusEstoque: 'CRITICO',
+          precoVenda: 40,
+        },
+      ],
+      meta: { pagina: 1, totalPaginas: 1, total: 3 },
+    },
+    isLoading: false,
+    isPending: false,
+  }),
+}))
+
+vi.mock('../../src/api/movimentacoes.js', () => ({
+  useMovimentacoes: () => ({
+    data: { dados: [], meta: { pagina: 1, totalPaginas: 1, total: 0 } },
+    isLoading: false,
+    isPending: false,
   }),
 }))
 
@@ -29,8 +58,12 @@ describe('Dashboard', () => {
       ),
     )
 
+    expect(html).toContain('Total de itens')
+    expect(html).toContain('Entradas (hoje)')
+    expect(html).toContain('Última reposição')
+    expect(html).toContain('Controle de inventário')
+    expect(html).toContain('Resumo dos produtos cadastrados')
+    expect(html).toContain('Ver todos')
     expect(html).toContain('Dashboard')
-    expect(html).toContain('Registrar entrada')
-    expect(html).toContain('Registrar saída')
   })
 })

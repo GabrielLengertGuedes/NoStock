@@ -1,142 +1,48 @@
 import { useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useCategorias } from '../api/categorias.js'
-import { useFornecedores } from '../api/fornecedores.js'
-import {
-  useAtualizarProduto,
-  useCriarProduto,
-  useInativarProduto,
-  useProdutos,
-} from '../api/produtos.js'
+import { useInativarProduto, useProdutos, useValorInventario } from '../api/produtos.js'
 import { BadgeStatus } from '../components/BadgeStatus.jsx'
 import { Campo } from '../components/Campo.jsx'
 import { EstadoVazio } from '../components/EstadoVazio.jsx'
+import { FabBioma } from '../components/FabBioma.jsx'
+import { IconeAlerta, IconeProdutos } from '../components/IconesBioma.jsx'
+import { KpiCard } from '../components/KpiCard.jsx'
 import { Layout } from '../components/Layout.jsx'
+import { MenuAcoes } from '../components/MenuAcoes.jsx'
 import { Modal } from '../components/Modal.jsx'
 import { ModalMovimentacao } from '../components/ModalMovimentacao.jsx'
 import { Paginacao } from '../components/Paginacao.jsx'
+import { ProdutoThumb } from '../components/ProdutoThumb.jsx'
 import { Tabela } from '../components/Tabela.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
+import { skuDoProduto } from '../lib/sku.js'
 
-const STATUS = [
-  { valor: '', rotulo: 'Todos' },
-  { valor: 'SEM_ESTOQUE', rotulo: 'Sem estoque' },
-  { valor: 'CRITICO', rotulo: 'Crítico' },
-  { valor: 'BAIXO', rotulo: 'Baixo' },
-  { valor: 'NORMAL', rotulo: 'Normal' },
-  { valor: 'PRECISA_REPOR', rotulo: 'Precisa repor' },
-]
-
+const MOEDA = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const FILTROS_VAZIOS = { busca: '', categoriaId: '', status: '', pagina: 1 }
-const FORM_VAZIO = {
-  nome: '',
-  descricao: '',
-  categoriaId: '',
-  fornecedorId: '',
-  precoVenda: '',
-  estoqueInicial: '',
-  estoqueMinimo: '0',
-}
 
 export function Produtos() {
   const menu = useMenuPrincipal()
+  const navegar = useNavigate()
+  const [searchParams] = useSearchParams()
   const { autenticado, temPapel } = useAuth()
   const podeEditar = autenticado
   const podeExcluir = temPapel('GESTOR')
   const categorias = useCategorias()
-  const fornecedores = useFornecedores()
-  const criar = useCriarProduto()
-  const atualizar = useAtualizarProduto()
   const inativar = useInativarProduto()
 
-  const [filtros, setFiltros] = useState(FILTROS_VAZIOS)
-  const [emEdicao, setEmEdicao] = useState(null)
+  const [filtros, setFiltros] = useState(() => ({
+    ...FILTROS_VAZIOS,
+    busca: searchParams.get('busca') ?? '',
+    status: searchParams.get('status') ?? '',
+  }))
   const [aExcluir, setAExcluir] = useState(null)
   const [movimentacao, setMovimentacao] = useState(null)
-  const [formulario, setFormulario] = useState(FORM_VAZIO)
-  const [confirmarDuplicado, setConfirmarDuplicado] = useState(false)
 
-  // Trocar qualquer filtro volta pra pagina 1, senao a pagina atual pode nem
-  // existir mais no resultado novo.
   function mudarFiltro(campo, valor) {
     setFiltros((atual) => ({ ...atual, [campo]: valor, pagina: 1 }))
-  }
-
-  function abrirFormulario(produto) {
-    criar.reset()
-    atualizar.reset()
-    setConfirmarDuplicado(false)
-    setEmEdicao(produto ?? { id: null })
-    setFormulario(
-      produto
-        ? {
-            nome: produto.nome ?? '',
-            descricao: produto.descricao ?? '',
-            categoriaId: produto.categoria?.id ?? '',
-            fornecedorId: produto.fornecedor?.id ?? '',
-            precoVenda: produto.precoVenda ?? '',
-            estoqueInicial: '',
-            estoqueMinimo: produto.estoqueMinimo ?? '0',
-          }
-        : FORM_VAZIO,
-    )
-  }
-
-  function montarDados() {
-    const categoriaId = formulario.categoriaId === '' ? null : Number(formulario.categoriaId)
-    const precoVenda = formulario.precoVenda === '' ? null : Number(formulario.precoVenda)
-    const estoqueMinimo = formulario.estoqueMinimo === '' ? 0 : Number(formulario.estoqueMinimo)
-    const estoqueInicial = formulario.estoqueInicial === '' ? 0 : Number(formulario.estoqueInicial)
-
-    return {
-      nome: formulario.nome,
-      descricao: formulario.descricao || null,
-      categoriaId,
-      fornecedorId: formulario.fornecedorId ? Number(formulario.fornecedorId) : null,
-      precoVenda,
-      estoqueMinimo,
-      ...(emEdicao?.id ? {} : { estoqueInicial }),
-      confirmarNomeDuplicado: confirmarDuplicado,
-    }
-  }
-
-  function fecharFormulario() {
-    setEmEdicao(null)
-    setConfirmarDuplicado(false)
-    setFormulario(FORM_VAZIO)
-  }
-
-  function salvar(evento) {
-    evento.preventDefault()
-
-    const dados = montarDados()
-    const acao = emEdicao?.id
-      ? atualizar.mutateAsync({ id: emEdicao.id, ...dados })
-      : criar.mutateAsync(dados)
-
-    acao
-      .then(() => fecharFormulario())
-      .catch((erro) => {
-        if (erro?.codigo === 'NOME_DUPLICADO' && !confirmarDuplicado) {
-          setConfirmarDuplicado(true)
-        }
-      })
-  }
-
-  function salvarMesmoAssim() {
-    const dados = { ...montarDados(), confirmarNomeDuplicado: true }
-    const acao = emEdicao?.id
-      ? atualizar.mutateAsync({ id: emEdicao.id, ...dados })
-      : criar.mutateAsync(dados)
-
-    acao
-      .then(() => fecharFormulario())
-      .catch((erro) => {
-        if (erro?.codigo === 'NOME_DUPLICADO') {
-          setConfirmarDuplicado(true)
-        }
-      })
   }
 
   function confirmarExclusao() {
@@ -150,15 +56,54 @@ export function Produtos() {
     pagina: filtros.pagina,
   })
   const { dados: produtos = [], meta } = consulta.data ?? {}
-  const salvando = criar.isPending || atualizar.isPending
-  const erroDoServidor = criar.error ?? atualizar.error
-  const criando = emEdicao !== null && !emEdicao.id
+
+  const totalGeral = useProdutos({ pagina: 1, porPagina: 1 })
+  const totalBaixos = useProdutos({ status: 'PRECISA_REPOR', pagina: 1, porPagina: 1 })
+  const inventario = useValorInventario()
+  const valorInventario = inventario.data?.valor ?? 0
+
+  const abas = [
+    { valor: '', rotulo: 'Todos' },
+    { valor: 'CRITICO', rotulo: 'Críticos' },
+    { valor: 'PRECISA_REPOR', rotulo: 'Atenção' },
+    { valor: 'NORMAL', rotulo: 'Ativos' },
+    { valor: 'SEM_ESTOQUE', rotulo: 'Sem estoque' },
+  ]
 
   const colunas = [
-    { chave: 'nome', titulo: 'Nome' },
-    { chave: 'categoria', titulo: 'Categoria', render: (p) => p.categoria.nome },
-    { chave: 'quantidadeAtual', titulo: 'Saldo', alinhamento: 'right' },
-    { chave: 'estoqueMinimo', titulo: 'Mínimo', alinhamento: 'right' },
+    {
+      chave: 'nome',
+      titulo: 'Produto',
+      render: (p) => (
+        <div className="produto-celula">
+          <ProdutoThumb id={p.id} nome={p.nome} categoria={p.categoria?.nome} />
+          <div>
+            <p className="produto-nome">{p.nome}</p>
+            <p className="sku-codigo">{skuDoProduto(p)}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      chave: 'categoria',
+      titulo: 'Categoria',
+      render: (p) => <span className="categoria-pill">{p.categoria?.nome ?? '—'}</span>,
+    },
+    {
+      chave: 'precoVenda',
+      titulo: 'Preço',
+      render: (p) => <span className="text-mono">{p.precoVenda != null ? MOEDA.format(p.precoVenda) : '—'}</span>,
+    },
+    {
+      chave: 'quantidadeAtual',
+      titulo: 'Quantidade',
+      render: (p) => (
+        <div className={`qtd-celula${p.quantidadeAtual <= (p.estoqueMinimo ?? 0) ? ' qtd-baixa' : ''}`}>
+          <strong>{p.quantidadeAtual} un.</strong>
+          <span>Mínimo: {p.estoqueMinimo ?? 0} un.</span>
+        </div>
+      ),
+    },
     {
       chave: 'statusEstoque',
       titulo: 'Status',
@@ -169,61 +114,52 @@ export function Produtos() {
   if (podeEditar) {
     colunas.push({
       chave: 'acoes',
-      titulo: 'Ações',
+      titulo: '',
       alinhamento: 'right',
-      render: (produto) => (
-        <div className="flex gap-sm" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn btn-accent"
-            onClick={() => setMovimentacao({ tipo: 'ENTRADA', produto })}
-          >
-            Entrada
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setMovimentacao({ tipo: 'SAIDA', produto })}
-          >
-            Saída
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => abrirFormulario(produto)}>
-            Editar
-          </button>
-          {podeExcluir && (
-            <button type="button" className="btn btn-danger" onClick={() => setAExcluir(produto)}>
-              Excluir
-            </button>
-          )}
-        </div>
-      ),
+      render: (produto) => {
+        const itens = [
+          { rotulo: 'Registrar entrada', onClick: () => setMovimentacao({ tipo: 'ENTRADA', produto }) },
+          { rotulo: 'Registrar saída', onClick: () => setMovimentacao({ tipo: 'SAIDA', produto }) },
+          { rotulo: 'Editar', onClick: () => navegar(`/produtos/${produto.id}/editar`) },
+        ]
+        if (podeExcluir) {
+          itens.push({ rotulo: 'Excluir', onClick: () => setAExcluir(produto), perigo: true })
+        }
+        return <MenuAcoes rotulo={`Ações de ${produto.nome}`} itens={itens} />
+      },
     })
   }
 
   return (
     <Layout
-      titulo="Produtos"
+      titulo="Estoque de Produtos"
+      subtitulo="Gerencie o inventário em tempo real e acompanhe a disponibilidade."
       menu={menu}
+      buscaPlaceholder="Buscar produtos ou SKUs…"
+      onBusca={(termo) => mudarFiltro('busca', termo)}
       acoes={
         podeEditar ? (
-          <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
-            Novo produto
-          </button>
+          <Link to="/produtos/novo" className="btn btn-primary">
+            + Novo produto
+          </Link>
         ) : null
       }
     >
-      <div
-        className="flex gap-md"
-        style={{ flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 'var(--spacing-base)' }}
-      >
-        <Campo
-          id="produtos-busca"
-          rotulo="Buscar"
-          type="search"
-          placeholder="Nome do produto"
-          value={filtros.busca}
-          onChange={(e) => mudarFiltro('busca', e.target.value)}
-        />
+      <div className="filtros-linha">
+        <div className="segmented" role="tablist" aria-label="Filtro rápido de status">
+          {abas.map((aba) => (
+            <button
+              key={aba.valor || 'todos'}
+              type="button"
+              role="tab"
+              aria-selected={filtros.status === aba.valor}
+              className={`segmented-btn${filtros.status === aba.valor ? ' segmented-btn-ativo' : ''}`}
+              onClick={() => mudarFiltro('status', aba.valor)}
+            >
+              {aba.rotulo}
+            </button>
+          ))}
+        </div>
 
         <Campo id="produtos-categoria" rotulo="Categoria">
           <select
@@ -232,7 +168,7 @@ export function Produtos() {
             value={filtros.categoriaId}
             onChange={(e) => mudarFiltro('categoriaId', e.target.value)}
           >
-            <option value="">Todas</option>
+            <option value="">Todas as categorias</option>
             {(categorias.data ?? []).map((categoria) => (
               <option key={categoria.id} value={categoria.id}>
                 {categoria.nome}
@@ -240,22 +176,36 @@ export function Produtos() {
             ))}
           </select>
         </Campo>
-
-        <Campo id="produtos-status" rotulo="Status do estoque">
-          <select
-            id="produtos-status"
-            className="input-field"
-            value={filtros.status}
-            onChange={(e) => mudarFiltro('status', e.target.value)}
-          >
-            {STATUS.map((opcao) => (
-              <option key={opcao.valor} value={opcao.valor}>
-                {opcao.rotulo}
-              </option>
-            ))}
-          </select>
-        </Campo>
       </div>
+
+      <section className="kpi-grid kpi-grid-3" aria-label="Indicadores de produtos">
+        <KpiCard
+          tom="neutro"
+          Icone={IconeProdutos}
+          rotulo="Total de SKUs"
+          valor={totalGeral.data?.meta?.total ?? meta?.total ?? 0}
+          meta={<span className="kpi-pill kpi-pill-ok">Catálogo ativo</span>}
+        />
+        <KpiCard
+          tom="urgente"
+          Icone={IconeAlerta}
+          rotulo="Estoque baixo"
+          valor={totalBaixos.data?.meta?.total ?? 0}
+          meta={<span className="kpi-pill kpi-pill-danger">Ação requerida</span>}
+        />
+        <KpiCard
+          tom="mint"
+          Icone={IconeProdutos}
+          rotulo="Valor de inventário"
+          valor={MOEDA.format(valorInventario)}
+          valorPequeno
+          meta={
+            <span className="kpi-pill kpi-pill-ok">
+              {inventario.data?.completo === false ? 'Catálogo parcial' : 'Catálogo completo'}
+            </span>
+          }
+        />
+      </section>
 
       {consulta.isError && (
         <p className="campo-erro text-body" role="alert">
@@ -263,152 +213,37 @@ export function Produtos() {
         </p>
       )}
 
-      <Tabela
-        colunas={colunas}
-        dados={produtos}
-        carregando={consulta.isPending}
-        vazio={
-          <EstadoVazio
-            titulo="Nenhum produto encontrado"
-            descricao="Ajuste a busca ou os filtros para ver outros produtos do catálogo."
-            acao={
-              podeEditar ? (
-                <button type="button" className="btn btn-primary" onClick={() => abrirFormulario(null)}>
-                  Cadastrar o primeiro
-                </button>
-              ) : null
-            }
-          />
-        }
-      />
-
-      {meta && (
-        <Paginacao
-          pagina={meta.pagina}
-          totalPaginas={meta.totalPaginas}
-          total={meta.total}
-          aoMudar={(pagina) => setFiltros((atual) => ({ ...atual, pagina }))}
-        />
-      )}
-
-      <Modal
-        aberto={emEdicao !== null}
-        aoFechar={() => setEmEdicao(null)}
-        titulo={emEdicao?.id ? 'Editar produto' : 'Novo produto'}
-        acoes={
-          <>
-            <button type="button" className="btn btn-secondary" onClick={fecharFormulario}>
-              Cancelar
-            </button>
-            {confirmarDuplicado && (
-              <button type="button" className="btn btn-primary" onClick={salvarMesmoAssim} disabled={salvando}>
-                {salvando ? 'Salvando…' : 'Salvar mesmo assim'}
-              </button>
-            )}
-            {!confirmarDuplicado && (
-              <button type="submit" form="formulario-produto" className="btn btn-primary" disabled={salvando}>
-                {salvando ? 'Salvando…' : 'Salvar'}
-              </button>
-            )}
-          </>
-        }
-      >
-        <form id="formulario-produto" onSubmit={salvar} className="modal-corpo">
-          <Campo
-            id="produto-nome"
-            rotulo="Nome"
-            obrigatorio
-            value={formulario.nome}
-            onChange={(e) => setFormulario({ ...formulario, nome: e.target.value })}
-            erro={erroDoServidor?.campos?.nome}
-          />
-          <Campo
-            id="produto-descricao"
-            rotulo="Descrição"
-            ajuda="Opcional."
-            value={formulario.descricao}
-            onChange={(e) => setFormulario({ ...formulario, descricao: e.target.value })}
-            erro={erroDoServidor?.campos?.descricao}
-          />
-          <Campo id="produto-categoriaId" rotulo="Categoria" obrigatorio erro={erroDoServidor?.campos?.categoriaId}>
-            <select
-              id="produto-categoriaId"
-              className="input-field"
-              value={formulario.categoriaId}
-              onChange={(e) => setFormulario({ ...formulario, categoriaId: e.target.value })}
-              aria-invalid={erroDoServidor?.campos?.categoriaId ? 'true' : undefined}
-              required
-            >
-              <option value="">Selecione uma categoria</option>
-              {(categorias.data ?? []).map((categoria) => (
-                <option key={categoria.id} value={categoria.id}>
-                  {categoria.nome}
-                </option>
-              ))}
-            </select>
-          </Campo>
-          <Campo id="produto-fornecedorId" rotulo="Fornecedor" ajuda="Opcional." erro={erroDoServidor?.campos?.fornecedorId}>
-            <select
-              id="produto-fornecedorId"
-              className="input-field"
-              value={formulario.fornecedorId}
-              onChange={(e) => setFormulario({ ...formulario, fornecedorId: e.target.value })}
-              aria-invalid={erroDoServidor?.campos?.fornecedorId ? 'true' : undefined}
-            >
-              <option value="">Sem fornecedor</option>
-              {(fornecedores.data ?? []).map((fornecedor) => (
-                <option key={fornecedor.id} value={fornecedor.id}>
-                  {fornecedor.nome}
-                </option>
-              ))}
-            </select>
-          </Campo>
-          <Campo
-            id="produto-precoVenda"
-            rotulo="Preço de venda"
-            type="number"
-            min="0"
-            step="0.01"
-            obrigatorio
-            value={formulario.precoVenda}
-            onChange={(e) => setFormulario({ ...formulario, precoVenda: e.target.value })}
-            erro={erroDoServidor?.campos?.precoVenda}
-          />
-          {criando && (
-            <Campo
-              id="produto-estoqueInicial"
-              rotulo="Estoque inicial"
-              type="number"
-              min="0"
-              step="1"
-              value={formulario.estoqueInicial}
-              onChange={(e) => setFormulario({ ...formulario, estoqueInicial: e.target.value })}
-              erro={erroDoServidor?.campos?.estoqueInicial}
+      <section className="painel">
+        <Tabela
+          colunas={colunas}
+          dados={produtos}
+          carregando={consulta.isPending}
+          vazio={
+            <EstadoVazio
+              titulo="Nenhum produto encontrado"
+              descricao="Ajuste a busca ou os filtros para ver outros produtos do catálogo."
+              acao={
+                podeEditar ? (
+                  <Link to="/produtos/novo" className="btn btn-primary">
+                    Cadastrar o primeiro
+                  </Link>
+                ) : null
+              }
             />
-          )}
-          <Campo
-            id="produto-estoqueMinimo"
-            rotulo="Estoque mínimo"
-            type="number"
-            min="0"
-            step="1"
-            obrigatorio
-            value={formulario.estoqueMinimo}
-            onChange={(e) => setFormulario({ ...formulario, estoqueMinimo: e.target.value })}
-            erro={erroDoServidor?.campos?.estoqueMinimo}
+          }
+        />
+
+        {meta && (
+          <Paginacao
+            pagina={meta.pagina}
+            totalPaginas={meta.totalPaginas}
+            total={meta.total}
+            aoMudar={(pagina) => setFiltros((atual) => ({ ...atual, pagina }))}
           />
-          {erroDoServidor && !erroDoServidor.campos && (
-            <p className="campo-erro text-body-sm" role="alert">
-              {erroDoServidor.mensagem}
-            </p>
-          )}
-          {erroDoServidor?.codigo === 'NOME_DUPLICADO' && !confirmarDuplicado && (
-            <p className="campo-erro text-body-sm" role="alert">
-              Já existe um produto ativo com esse nome. Confirme para salvar mesmo assim.
-            </p>
-          )}
-        </form>
-      </Modal>
+        )}
+      </section>
+
+      {podeEditar && <FabBioma onClick={() => setMovimentacao({ tipo: 'ENTRADA' })} />}
 
       {movimentacao && (
         <ModalMovimentacao
@@ -423,6 +258,7 @@ export function Produtos() {
         aberto={aExcluir !== null}
         aoFechar={() => setAExcluir(null)}
         titulo="Excluir produto"
+        subtitulo="Exclusão lógica: o histórico de movimentações permanece."
         acoes={
           <>
             <button type="button" className="btn btn-secondary" onClick={() => setAExcluir(null)}>
