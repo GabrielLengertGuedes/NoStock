@@ -8,6 +8,7 @@ const DEFINICOES = {
   SESSION_MAX_AGE_HOURS: { padrao: '8', numero: true },
   CORS_ORIGIN: { padrao: 'http://localhost:5173' },
   BCRYPT_ROUNDS: { padrao: '12', numero: true },
+  LOJA_TIME_ZONE: { padrao: 'America/Sao_Paulo' },
 }
 
 export class EnvInvalido extends Error {
@@ -56,6 +57,7 @@ export function lerEnv(fonte = process.env) {
     sessionMaxAgeHoras: bruto.SESSION_MAX_AGE_HOURS,
     corsOrigin: bruto.CORS_ORIGIN,
     bcryptRounds: bruto.BCRYPT_ROUNDS,
+    lojaTimeZone: bruto.LOJA_TIME_ZONE,
     producao: bruto.NODE_ENV === 'production',
   })
 }
