@@ -35,3 +35,46 @@ export async function obterRankingPorCategoria({ de, ate, categoriaId }, conexao
   )
   return rows
 }
+
+// Fotografia do estoque atual por categoria: unidades e valor imobilizado
+// (quantidade x preco de venda). Categoria sem produto ativo ainda aparece,
+// com os agregados zerados — coalesce cobre o left join sem correspondencia.
+export async function obterDistribuicaoPorCategoria(conexao = obterPool()) {
+  const { rows } = await conexao.query(`
+    select c.id, c.nome,
+           count(p.id)::int as produtos,
+           coalesce(sum(p.quantidade_atual), 0)::int as unidades,
+           coalesce(sum(p.quantidade_atual * p.preco_venda), 0)::float8 as "valorImobilizado"
+      from public.categorias c
+      left join public.produtos p on p.categoria_id = c.id and p.ativo
+     where c.ativo
+     group by c.id, c.nome
+     order by unidades desc
+  `)
+  return rows
+}
+
+// Unidades vendidas no periodo (RN09: contadas por movimentacao, nao por
+// estoque) e o saldo atual de cada produto ativo, base para o giro.
+export async function obterVendasEEstoquePorProduto({ de, ate, categoriaId }, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `select p.id, p.nome,
+            jsonb_build_object('id', c.id, 'nome', c.nome) as categoria,
+            p.quantidade_atual as "quantidadeAtual",
+            coalesce(vendas.unidades, 0)::int as "unidadesVendidas"
+       from public.produtos p
+       join public.categorias c on c.id = p.categoria_id
+       left join (
+         select produto_id, sum(quantidade) as unidades
+           from public.movimentacoes
+          where tipo = 'SAIDA' and motivo = 'VENDA'
+            and criado_em between $1 and $2
+          group by produto_id
+       ) vendas on vendas.produto_id = p.id
+      where p.ativo
+        and ($3::int is null or c.id = $3::int)
+      order by p.nome`,
+    [de, ate, categoriaId ?? null],
+  )
+  return rows
+}

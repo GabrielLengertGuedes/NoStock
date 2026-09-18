@@ -33,3 +33,14 @@ export const filtrosDeRanking = z
     categoriaId: z.coerce.number().int().positive().optional(),
   })
   .superRefine(exigeOrdemDoPeriodo)
+
+// Sem periodo: e uma fotografia do estoque atual, nao um acumulado de eventos.
+export const filtrosDeCategorias = z.object({})
+
+export const filtrosDeGiro = z
+  .object({
+    de: dataIso,
+    ate: dataIso,
+    categoriaId: z.coerce.number().int().positive().optional(),
+  })
+  .superRefine(exigeOrdemDoPeriodo)

@@ -229,4 +229,138 @@ describe.skipIf(!temBanco())('/api/relatorios', () => {
       expect(resposta.body.dados.categorias.map((c) => c.categoria.id)).toEqual([categoriaRacaoId])
     })
   })
+
+  describe('GET /categorias', () => {
+    it('recusa acesso de operador com 403', async () => {
+      const cliente = await logar('OPERADOR')
+
+      const resposta = await cliente.get('/api/relatorios/categorias')
+
+      expect(resposta.status).toBe(403)
+      expect(resposta.body.erro.codigo).toBe('SEM_PERMISSAO')
+    })
+
+    it('recusa acesso sem sessao com 401', async () => {
+      const resposta = await request(app).get('/api/relatorios/categorias')
+
+      expect(resposta.status).toBe(401)
+      expect(resposta.body.erro.codigo).toBe('NAO_AUTENTICADO')
+    })
+
+    it('consolida unidades e valor imobilizado por categoria', async () => {
+      // categoria sem nenhum produto ativo: deve aparecer zerada, nao sumir.
+      const { rows: vaziaRows } = await obterPool().query(
+        `insert into public.categorias (nome) values ('Categoria Vazia Relatórios') returning id`,
+      )
+      const categoriaVaziaId = vaziaRows[0].id
+
+      // produto inativo nao pode contar nos agregados da sua categoria.
+      await obterPool().query(
+        `insert into public.produtos (nome, categoria_id, preco_venda, quantidade_atual, estoque_minimo, ativo)
+         values ('Ração Inativa Relatório', $1, 100.00, 50, 0, false)`,
+        [categoriaRacaoId],
+      )
+
+      const gestor = await logar('GESTOR')
+      const resposta = await gestor.get('/api/relatorios/categorias')
+
+      expect(resposta.status).toBe(200)
+      const porId = Object.fromEntries(resposta.body.dados.categorias.map((c) => [c.id, c]))
+
+      expect(porId[categoriaRacaoId]).toMatchObject({
+        nome: 'Ração Relatórios',
+        produtos: 1,
+        unidades: 100,
+        valorImobilizado: 5000,
+      })
+      expect(porId[categoriaHigieneId]).toMatchObject({
+        nome: 'Higiene Relatórios',
+        produtos: 1,
+        unidades: 100,
+        valorImobilizado: 3000,
+      })
+      expect(porId[categoriaVaziaId]).toMatchObject({
+        nome: 'Categoria Vazia Relatórios',
+        produtos: 0,
+        unidades: 0,
+        valorImobilizado: 0,
+      })
+    })
+  })
+
+  describe('GET /giro', () => {
+    it('recusa acesso de operador com 403', async () => {
+      const cliente = await logar('OPERADOR')
+
+      const resposta = await cliente.get(`/api/relatorios/giro${PERIODO_AMPLO}`)
+
+      expect(resposta.status).toBe(403)
+      expect(resposta.body.erro.codigo).toBe('SEM_PERMISSAO')
+    })
+
+    it('exige de e ate com 422', async () => {
+      const cliente = await logar('GESTOR')
+
+      const resposta = await cliente.get('/api/relatorios/giro')
+
+      expect(resposta.status).toBe(422)
+      expect(resposta.body.erro.codigo).toBe('VALIDACAO')
+    })
+
+    it('traz a formula do calculo, para a interface explicar o numero', async () => {
+      const cliente = await logar('GESTOR')
+
+      const resposta = await cliente.get(`/api/relatorios/giro${PERIODO_AMPLO}`)
+
+      expect(resposta.status).toBe(200)
+      expect(typeof resposta.body.dados.formula).toBe('string')
+      expect(resposta.body.dados.formula.length).toBeGreaterThan(0)
+    })
+
+    it('calcula o giro por produto (vendidas no periodo / estoque atual) e o geral', async () => {
+      const gestor = await logar('GESTOR')
+      await venderViaApi(gestor, produtoRacaoId, 20) // saldo cai de 100 para 80
+
+      const resposta = await gestor.get(`/api/relatorios/giro${PERIODO_AMPLO}`)
+
+      expect(resposta.status).toBe(200)
+      const racao = resposta.body.dados.produtos.find((p) => p.id === produtoRacaoId)
+      expect(racao).toMatchObject({ unidadesVendidas: 20, quantidadeAtual: 80, giro: 0.25 })
+
+      const higiene = resposta.body.dados.produtos.find((p) => p.id === produtoHigieneId)
+      expect(higiene).toMatchObject({ unidadesVendidas: 0, quantidadeAtual: 100, giro: 0 })
+
+      expect(resposta.body.dados.geral).toMatchObject({
+        unidadesVendidas: 20,
+        quantidadeEmEstoque: 180,
+        giro: 0.11,
+      })
+    })
+
+    it('devolve giro nulo para produto sem estoque, em vez de dividir por zero', async () => {
+      const { rows } = await obterPool().query(
+        `insert into public.produtos (nome, categoria_id, preco_venda, quantidade_atual, estoque_minimo)
+         values ('Produto Zerado Relatório', $1, 10.00, 0, 0)
+         returning id`,
+        [categoriaRacaoId],
+      )
+      const produtoZeradoId = rows[0].id
+
+      const cliente = await logar('GESTOR')
+      const resposta = await cliente.get(`/api/relatorios/giro${PERIODO_AMPLO}`)
+
+      expect(resposta.status).toBe(200)
+      const zerado = resposta.body.dados.produtos.find((p) => p.id === produtoZeradoId)
+      expect(zerado.giro).toBeNull()
+    })
+
+    it('filtra por categoriaId quando informado', async () => {
+      const cliente = await logar('GESTOR')
+
+      const resposta = await cliente.get(`/api/relatorios/giro${PERIODO_AMPLO}&categoriaId=${categoriaRacaoId}`)
+
+      expect(resposta.status).toBe(200)
+      expect(resposta.body.dados.produtos.map((p) => p.id)).toEqual([produtoRacaoId])
+    })
+  })
 })
