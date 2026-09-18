@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 
+import { useDashboard } from '../api/dashboard.js'
 import { useMovimentacoes } from '../api/movimentacoes.js'
 import { useProdutos } from '../api/produtos.js'
 import { BadgeStatus } from '../components/BadgeStatus.jsx'
+import { EstadoVazio } from '../components/EstadoVazio.jsx'
 import { FabBioma } from '../components/FabBioma.jsx'
 import { IconeAlerta, IconeCaixaVazia, IconeMovimentacoes, IconeProdutos } from '../components/IconesBioma.jsx'
 import { KpiCard } from '../components/KpiCard.jsx'
@@ -19,16 +21,6 @@ import { skuDoProduto } from '../lib/sku.js'
 const MOEDA = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const DATA_CURTA = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' })
 
-function totalDe(consulta) {
-  return consulta.data?.meta?.total ?? 0
-}
-
-function inicioDoDiaLocal() {
-  const data = new Date()
-  data.setHours(0, 0, 0, 0)
-  return data.toISOString()
-}
-
 function formatarReposicao(iso) {
   if (!iso) return '—'
   const data = new Date(iso)
@@ -41,33 +33,23 @@ export function Dashboard() {
   const { usuario } = useAuth()
   const [modal, setModal] = useState(null)
 
-  const total = useProdutos({ pagina: 1, porPagina: 1 })
-  const baixos = useProdutos({ status: 'BAIXO', pagina: 1, porPagina: 1 })
-  const criticos = useProdutos({ status: 'CRITICO', pagina: 1, porPagina: 1 })
-  const zerados = useProdutos({ status: 'SEM_ESTOQUE', pagina: 1, porPagina: 1 })
+  // Os 4 cards e a fila de atenção vêm prontos do GET /dashboard — cálculo de
+  // "hoje" e prioridade dos produtos são responsabilidade do backend (F3-01).
+  const dashboard = useDashboard()
   const resumo = useProdutos({ pagina: 1, porPagina: 10 })
-  const atencao = useProdutos({ status: 'PRECISA_REPOR', pagina: 1, porPagina: 10 })
-  const entradasHoje = useMovimentacoes({
-    tipo: 'ENTRADA',
-    de: inicioDoDiaLocal(),
-    pagina: 1,
-    porPagina: 1,
-  })
   const entradasRecentes = useMovimentacoes({
     tipo: 'ENTRADA',
     pagina: 1,
     porPagina: 100,
   })
 
+  const cards = dashboard.data?.cards
+  const produtosAtencao = dashboard.data?.produtosAtencao ?? []
   const produtosResumo = resumo.data?.dados ?? []
-  const produtosAtencao = atencao.data?.dados ?? []
-  const alertas = produtosAtencao.slice(0, 3)
   const primeiroNome = usuario?.nome?.split(' ')[0] || 'de volta'
-  const totalItens = totalDe(total)
-  const totalBaixo = totalDe(baixos) + totalDe(criticos)
-  const totalZerado = totalDe(zerados)
-  const totalEntradasHoje = totalDe(entradasHoje)
-  const emAtencao = totalDe(atencao)
+
+  const totalItens = cards?.totalItens ?? 0
+  const emAtencao = (cards?.estoqueBaixo ?? 0) + (cards?.semEstoque ?? 0)
   const percentualOtimo =
     totalItens > 0 ? Math.max(0, Math.round(((totalItens - emAtencao) / totalItens) * 100)) : 100
 
@@ -87,7 +69,7 @@ export function Dashboard() {
     return acc + faltando * preco
   }, 0)
 
-  const cards = [
+  const kpis = [
     {
       chave: 'total',
       rotulo: 'Total de itens',
@@ -100,25 +82,25 @@ export function Dashboard() {
     {
       chave: 'baixo',
       rotulo: 'Estoque baixo',
-      valor: totalBaixo,
+      valor: cards?.estoqueBaixo ?? 0,
       meta: <span className="kpi-pill kpi-pill-warn">ATENÇÃO</span>,
       tom: 'alerta',
       Icone: IconeAlerta,
-      barra: totalItens ? Math.round((totalBaixo / totalItens) * 100) : 0,
+      barra: totalItens ? Math.round(((cards?.estoqueBaixo ?? 0) / totalItens) * 100) : 0,
     },
     {
       chave: 'zerado',
       rotulo: 'Sem estoque',
-      valor: totalZerado,
+      valor: cards?.semEstoque ?? 0,
       meta: <span className="kpi-pill kpi-pill-danger">Urgente</span>,
       tom: 'urgente',
       Icone: IconeCaixaVazia,
-      barra: totalItens ? Math.round((totalZerado / totalItens) * 100) : 0,
+      barra: totalItens ? Math.round(((cards?.semEstoque ?? 0) / totalItens) * 100) : 0,
     },
     {
       chave: 'entradas',
       rotulo: 'Entradas (hoje)',
-      valor: totalEntradasHoje,
+      valor: cards?.entradasHoje ?? 0,
       meta: (
         <Link to="/movimentacoes?tipo=ENTRADA" className="text-body-sm" style={{ color: 'var(--primary-medium)' }}>
           Ver histórico
@@ -129,6 +111,8 @@ export function Dashboard() {
     },
   ]
 
+  // Reaproveitada pela tabela de atenção e pelo controle de inventário: mesmo
+  // formato de linha, incluindo os atalhos de entrada/saída por produto.
   const colunas = [
     {
       chave: 'nome',
@@ -193,9 +177,55 @@ export function Dashboard() {
       menu={menu}
     >
       <section className="kpi-grid" aria-label="Resumo do estoque">
-        {cards.map((card) => (
+        {kpis.map((card) => (
           <KpiCard key={card.chave} {...card} />
         ))}
+      </section>
+
+      <section className="dashboard-grid-baixo">
+        <div className="painel">
+          <div className="painel-cabecalho">
+            <div>
+              <h2 className="text-h3">Produtos em atenção</h2>
+              <p className="text-body-sm" style={{ color: 'var(--gray)' }}>
+                Ordenados por prioridade: sem estoque primeiro, depois crítico e baixo.
+              </p>
+            </div>
+            <Link to="/produtos?status=PRECISA_REPOR" className="btn btn-secondary">
+              Ver todos
+            </Link>
+          </div>
+
+          <Tabela
+            colunas={colunas}
+            dados={produtosAtencao}
+            chaveDaLinha={(p) => p.id}
+            carregando={dashboard.isLoading}
+            vazio={
+              <EstadoVazio
+                titulo="Nenhum alerta no momento"
+                descricao="Todo o estoque está dentro do mínimo configurado."
+              />
+            }
+          />
+        </div>
+
+        <aside className="insight-card">
+          <p className="text-micro" style={{ opacity: 0.75, marginBottom: 8 }}>
+            Insights
+          </p>
+          <p className="kpi-valor kpi-valor-sm" style={{ color: 'inherit' }}>
+            {MOEDA.format(valorEmRisco)}
+          </p>
+          <p>
+            {valorEmRisco > 0
+              ? 'Valor abaixo do mínimo — priorize a reposição para evitar ruptura.'
+              : 'Nenhum valor em risco no momento. Continue acompanhando as entradas e saídas do dia.'}
+          </p>
+          <Link to="/produtos?status=PRECISA_REPOR" className="btn">
+            Ver produtos em atenção
+          </Link>
+        </aside>
       </section>
 
       <section className="painel">
@@ -223,60 +253,6 @@ export function Dashboard() {
           carregando={resumo.isLoading}
           vazio="Nenhum produto cadastrado ainda."
         />
-      </section>
-
-      <section className="dashboard-grid-baixo">
-        <div className="painel">
-          <div className="painel-cabecalho">
-            <h2 className="text-h3">Alertas de reposição</h2>
-          </div>
-          {alertas.length === 0 ? (
-            <p className="text-body-sm" style={{ color: 'var(--gray)' }}>
-              Nenhum alerta no momento.
-            </p>
-          ) : (
-            alertas.map((produto) => (
-              <article
-                key={produto.id}
-                className={`alerta-item${produto.statusEstoque === 'SEM_ESTOQUE' ? ' alerta-item-critico' : ''}`}
-              >
-                <div>
-                  <p className="produto-nome">{produto.nome}</p>
-                  <p className="produto-meta">
-                    {produto.statusEstoque === 'SEM_ESTOQUE'
-                      ? 'Esgotado'
-                      : `${produto.quantidadeAtual} un restantes`}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  style={{ color: 'var(--primary-medium)', fontWeight: 700 }}
-                  onClick={() => setModal({ tipo: 'ENTRADA', produto })}
-                >
-                  Pedir agora
-                </button>
-              </article>
-            ))
-          )}
-        </div>
-
-        <aside className="insight-card">
-          <p className="text-micro" style={{ opacity: 0.75, marginBottom: 8 }}>
-            Insights
-          </p>
-          <p className="kpi-valor kpi-valor-sm" style={{ color: 'inherit' }}>
-            {MOEDA.format(valorEmRisco)}
-          </p>
-          <p>
-            {valorEmRisco > 0
-              ? 'Valor abaixo do mínimo — priorize a reposição para evitar ruptura.'
-              : 'Nenhum valor em risco no momento. Continue acompanhando as entradas e saídas do dia.'}
-          </p>
-          <Link to="/produtos?status=PRECISA_REPOR" className="btn">
-            Ver produtos em atenção
-          </Link>
-        </aside>
       </section>
 
       <FabBioma onClick={() => setModal({ tipo: 'ENTRADA' })} />

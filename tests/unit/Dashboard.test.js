@@ -15,20 +15,31 @@ vi.mock('../../src/hooks/useAuth.js', () => ({
   }),
 }))
 
+const PRODUTO_EM_ATENCAO = {
+  id: 1,
+  nome: 'Ração Premium',
+  categoria: { id: 1, nome: 'Ração' },
+  quantidadeAtual: 2,
+  estoqueMinimo: 5,
+  statusEstoque: 'CRITICO',
+  precoVenda: 40,
+}
+
+vi.mock('../../src/api/dashboard.js', () => ({
+  useDashboard: () => ({
+    data: {
+      cards: { totalItens: 3, estoqueBaixo: 1, semEstoque: 0, entradasHoje: 2 },
+      produtosAtencao: [PRODUTO_EM_ATENCAO],
+    },
+    isLoading: false,
+    isPending: false,
+  }),
+}))
+
 vi.mock('../../src/api/produtos.js', () => ({
   useProdutos: () => ({
     data: {
-      dados: [
-        {
-          id: 1,
-          nome: 'Ração Premium',
-          categoria: { id: 1, nome: 'Ração' },
-          quantidadeAtual: 2,
-          estoqueMinimo: 5,
-          statusEstoque: 'CRITICO',
-          precoVenda: 40,
-        },
-      ],
+      dados: [PRODUTO_EM_ATENCAO],
       meta: { pagina: 1, totalPaginas: 1, total: 3 },
     },
     isLoading: false,
@@ -45,7 +56,7 @@ vi.mock('../../src/api/movimentacoes.js', () => ({
 }))
 
 describe('Dashboard', () => {
-  it('oferece atalhos de entrada e saída', () => {
+  it('monta os 4 cards, a fila de atenção priorizada e os atalhos de entrada e saída', () => {
     const cliente = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     })
@@ -58,8 +69,20 @@ describe('Dashboard', () => {
       ),
     )
 
+    // Os 4 cards do GET /dashboard.
     expect(html).toContain('Total de itens')
+    expect(html).toContain('Estoque baixo')
+    expect(html).toContain('Sem estoque')
     expect(html).toContain('Entradas (hoje)')
+
+    // Tabela de produtos em atenção, na ordem que o backend devolveu.
+    expect(html).toContain('Produtos em atenção')
+    expect(html).toContain('Ração Premium')
+
+    // Atalhos de entrada/saída por produto e o botão flutuante de entrada rápida.
+    expect(html).toContain('Registrar entrada')
+    expect(html).toContain('Registrar saída')
+
     expect(html).toContain('Última reposição')
     expect(html).toContain('Controle de inventário')
     expect(html).toContain('Resumo dos produtos cadastrados')
