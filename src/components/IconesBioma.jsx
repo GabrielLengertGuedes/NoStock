@@ -208,6 +208,17 @@ export function IconeToy(props) {
   )
 }
 
+export function IconeRelatorios(props) {
+  return (
+    <Svg {...props}>
+      <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+      <rect x="7" y="13" width="3" height="5" rx="0.5" />
+      <rect x="12" y="9" width="3" height="9" rx="0.5" />
+      <rect x="17" y="5" width="3" height="13" rx="0.5" />
+    </Svg>
+  )
+}
+
 export function IconeCategoria({ categoria = '', ...props }) {
   const t = categoria.toLowerCase()
   if (/ração|racao|alimento|pet food|comida/.test(t)) return <IconeBone {...props} />

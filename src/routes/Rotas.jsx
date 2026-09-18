@@ -8,6 +8,7 @@ import { Login } from '../pages/Login.jsx'
 import { Movimentacoes } from '../pages/Movimentacoes.jsx'
 import { ProdutoFormulario } from '../pages/ProdutoFormulario.jsx'
 import { Produtos } from '../pages/Produtos.jsx'
+import { Relatorios } from '../pages/Relatorios.jsx'
 import { Usuarios } from '../pages/Usuarios.jsx'
 import { RotaProtegida } from './RotaProtegida.jsx'
 
@@ -94,6 +95,14 @@ export function Rotas() {
           element={
             <RotaProtegida>
               <Fornecedores />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/relatorios"
+          element={
+            <RotaProtegida papel="GESTOR">
+              <Relatorios />
             </RotaProtegida>
           }
         />

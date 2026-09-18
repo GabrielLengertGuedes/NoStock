@@ -4,6 +4,7 @@ import {
   IconeFornecedores,
   IconeMovimentacoes,
   IconeProdutos,
+  IconeRelatorios,
   IconeUsuarios,
 } from '../components/IconesBioma.jsx'
 import { useAuth } from './useAuth.js'
@@ -18,7 +19,9 @@ export function useMenuPrincipal() {
     { para: '/fornecedores', rotulo: 'Fornecedores', Icone: IconeFornecedores },
     { para: '/movimentacoes', rotulo: 'Movimentações', Icone: IconeMovimentacoes },
   ]
+  // Relatorios expoe receita: mesma regra de acesso do backend (GESTOR).
   if (temPapel('GESTOR')) {
+    itens.push({ para: '/relatorios', rotulo: 'Relatórios', Icone: IconeRelatorios })
     itens.push({ para: '/usuarios', rotulo: 'Usuários', Icone: IconeUsuarios })
   }
   return itens
