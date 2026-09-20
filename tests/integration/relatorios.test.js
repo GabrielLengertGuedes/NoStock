@@ -317,27 +317,31 @@ describe.skipIf(!temBanco())('/api/relatorios', () => {
       expect(resposta.body.dados.formula.length).toBeGreaterThan(0)
     })
 
-    it('calcula o giro por produto (vendidas no periodo / estoque atual) e o geral', async () => {
+    it('calcula o giro por produto (vendidas no periodo / saldo medio) e o geral', async () => {
       const gestor = await logar('GESTOR')
-      await venderViaApi(gestor, produtoRacaoId, 20) // saldo cai de 100 para 80
+      await venderViaApi(gestor, produtoRacaoId, 20) // abertura 100 → fechamento 80 → media 90
 
       const resposta = await gestor.get(`/api/relatorios/giro${PERIODO_AMPLO}`)
 
       expect(resposta.status).toBe(200)
+      expect(resposta.body.dados.formula).toBe(
+        'unidades vendidas no período ÷ saldo médio do período',
+      )
+
       const racao = resposta.body.dados.produtos.find((p) => p.id === produtoRacaoId)
-      expect(racao).toMatchObject({ unidadesVendidas: 20, quantidadeAtual: 80, giro: 0.25 })
+      expect(racao).toMatchObject({ unidadesVendidas: 20, saldoMedio: 90, giro: 0.22 })
 
       const higiene = resposta.body.dados.produtos.find((p) => p.id === produtoHigieneId)
-      expect(higiene).toMatchObject({ unidadesVendidas: 0, quantidadeAtual: 100, giro: 0 })
+      expect(higiene).toMatchObject({ unidadesVendidas: 0, saldoMedio: 100, giro: 0 })
 
       expect(resposta.body.dados.geral).toMatchObject({
         unidadesVendidas: 20,
-        quantidadeEmEstoque: 180,
+        saldoMedio: 190,
         giro: 0.11,
       })
     })
 
-    it('devolve giro nulo para produto sem estoque, em vez de dividir por zero', async () => {
+    it('devolve giro nulo quando o saldo medio e zero, em vez de dividir por zero', async () => {
       const { rows } = await obterPool().query(
         `insert into public.produtos (nome, categoria_id, preco_venda, quantidade_atual, estoque_minimo)
          values ('Produto Zerado Relatório', $1, 10.00, 0, 0)
@@ -351,6 +355,7 @@ describe.skipIf(!temBanco())('/api/relatorios', () => {
 
       expect(resposta.status).toBe(200)
       const zerado = resposta.body.dados.produtos.find((p) => p.id === produtoZeradoId)
+      expect(zerado.saldoMedio).toBe(0)
       expect(zerado.giro).toBeNull()
     })
 

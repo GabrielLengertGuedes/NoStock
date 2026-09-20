@@ -48,10 +48,12 @@ export function Dashboard() {
   const produtosResumo = resumo.data?.dados ?? []
   const primeiroNome = usuario?.nome?.split(' ')[0] || 'de volta'
 
-  const totalItens = cards?.totalItens ?? 0
+  const totalProdutos = cards?.totalProdutos ?? 0
   const emAtencao = (cards?.estoqueBaixo ?? 0) + (cards?.semEstoque ?? 0)
   const percentualOtimo =
-    totalItens > 0 ? Math.max(0, Math.round(((totalItens - emAtencao) / totalItens) * 100)) : 100
+    totalProdutos > 0
+      ? Math.max(0, Math.round(((totalProdutos - emAtencao) / totalProdutos) * 100))
+      : 100
 
   const ultimaEntradaPorProduto = useMemo(() => {
     const mapa = new Map()
@@ -73,7 +75,7 @@ export function Dashboard() {
     {
       chave: 'total',
       rotulo: 'Total de itens',
-      valor: totalItens,
+      valor: totalProdutos,
       meta: <span className="kpi-pill kpi-pill-ok">Catálogo ativo</span>,
       tom: 'neutro',
       Icone: IconeProdutos,
@@ -86,7 +88,7 @@ export function Dashboard() {
       meta: <span className="kpi-pill kpi-pill-warn">ATENÇÃO</span>,
       tom: 'alerta',
       Icone: IconeAlerta,
-      barra: totalItens ? Math.round(((cards?.estoqueBaixo ?? 0) / totalItens) * 100) : 0,
+      barra: totalProdutos ? Math.round(((cards?.estoqueBaixo ?? 0) / totalProdutos) * 100) : 0,
     },
     {
       chave: 'zerado',
@@ -95,7 +97,7 @@ export function Dashboard() {
       meta: <span className="kpi-pill kpi-pill-danger">Urgente</span>,
       tom: 'urgente',
       Icone: IconeCaixaVazia,
-      barra: totalItens ? Math.round(((cards?.semEstoque ?? 0) / totalItens) * 100) : 0,
+      barra: totalProdutos ? Math.round(((cards?.semEstoque ?? 0) / totalProdutos) * 100) : 0,
     },
     {
       chave: 'entradas',

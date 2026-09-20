@@ -93,11 +93,14 @@ describe.skipIf(!temBanco())('GET /api/dashboard', () => {
 
     expect(resposta.status).toBe(200)
     expect(resposta.body.dados.cards).toEqual({
-      totalItens: 4,
+      totalProdutos: 4,
       semEstoque: 1,
       estoqueBaixo: 2,
       entradasHoje: 1,
+      saidasHoje: 1,
     })
+    expect(typeof resposta.body.dados.atualizadoEm).toBe('string')
+    expect(Number.isNaN(Date.parse(resposta.body.dados.atualizadoEm))).toBe(false)
   })
 
   it('devolve produtosAtencao ordenada por prioridade: SEM_ESTOQUE, CRITICO, BAIXO', async () => {
@@ -117,5 +120,21 @@ describe.skipIf(!temBanco())('GET /api/dashboard', () => {
       'CRITICO',
       'BAIXO',
     ])
+  })
+
+  it('limita produtosAtencao a 10 itens (CA10.4)', async () => {
+    for (let i = 0; i < 12; i += 1) {
+      await obterPool().query(
+        `insert into public.produtos (nome, categoria_id, preco_venda, quantidade_atual, estoque_minimo)
+         values ($1, $2, 10.00, 0, 5)`,
+        [`Produto Extra Atencao ${i}`, categoriaId],
+      )
+    }
+
+    const cliente = await logar()
+    const resposta = await cliente.get('/api/dashboard')
+
+    expect(resposta.status).toBe(200)
+    expect(resposta.body.dados.produtosAtencao).toHaveLength(10)
   })
 })

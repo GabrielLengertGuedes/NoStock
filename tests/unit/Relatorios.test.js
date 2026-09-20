@@ -23,8 +23,8 @@ vi.mock('../../src/api/relatorios.js', () => ({
   }),
   useGiroRelatorio: () => ({
     data: {
-      formula: 'Giro de estoque = unidades vendidas no período ÷ quantidade em estoque atual',
-      geral: { unidadesVendidas: 64, quantidadeEmEstoque: 106, giro: 0.6 },
+      formula: 'unidades vendidas no período ÷ saldo médio do período',
+      geral: { unidadesVendidas: 64, saldoMedio: 106, giro: 0.6 },
       produtos: [],
     },
     isPending: false,
@@ -78,7 +78,7 @@ describe('Relatorios', () => {
     expect(html).toContain('Total vendido')
     expect(html).toContain('Unidades vendidas')
     expect(html).toContain('Giro de estoque')
-    expect(html).toContain('unidades vendidas no período ÷ quantidade em estoque atual')
+    expect(html).toContain('unidades vendidas no período ÷ saldo médio do período')
   })
 
   it('mostra o ranking agrupado por categoria por padrão, com a opção de lista geral', () => {

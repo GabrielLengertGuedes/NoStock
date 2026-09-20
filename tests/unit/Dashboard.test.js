@@ -28,8 +28,9 @@ const PRODUTO_EM_ATENCAO = {
 vi.mock('../../src/api/dashboard.js', () => ({
   useDashboard: () => ({
     data: {
-      cards: { totalItens: 3, estoqueBaixo: 1, semEstoque: 0, entradasHoje: 2 },
+      cards: { totalProdutos: 3, estoqueBaixo: 1, semEstoque: 0, entradasHoje: 2, saidasHoje: 1 },
       produtosAtencao: [PRODUTO_EM_ATENCAO],
+      atualizadoEm: '2026-08-04T14:35:00.000Z',
     },
     isLoading: false,
     isPending: false,

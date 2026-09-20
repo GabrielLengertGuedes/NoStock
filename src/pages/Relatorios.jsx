@@ -157,8 +157,14 @@ export function Relatorios() {
           tom="alerta"
           Icone={IconeRelatorios}
           rotulo="Giro de estoque"
-          valor={giro.isPending ? '—' : NUMERO.format(giro.data?.geral?.giro ?? 0)}
-          meta={giro.data?.formula ?? 'Unidades vendidas ÷ quantidade em estoque atual'}
+          valor={
+            giro.isPending
+              ? '—'
+              : giro.data?.geral?.giro == null
+                ? '—'
+                : NUMERO.format(giro.data.geral.giro)
+          }
+          meta={giro.data?.formula ?? 'unidades vendidas no período ÷ saldo médio do período'}
         />
       </section>
 

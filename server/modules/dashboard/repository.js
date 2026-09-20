@@ -12,19 +12,20 @@ const PRIORIDADE_SQL = `case (${STATUS_SQL})
     else 3
   end`
 
-// Os 4 cards do dashboard (db/consultas-referencia.sql). entradasHoje usa os
-// limites do dia calculados no fuso da loja/cliente, nunca no fuso do servidor.
+// Os 4 cards do dashboard (db/consultas-referencia.sql). entradasHoje/saidasHoje
+// usam os limites do dia no fuso da loja/cliente, nunca no fuso do servidor.
 export async function obterCards({ inicioDoDia, fimDoDia }, conexao = obterPool()) {
   const [{ rows: produtos }, { rows: movimentacoes }] = await Promise.all([
     conexao.query(`
-      select count(*)::int as "totalItens",
+      select count(*)::int as "totalProdutos",
              count(*) filter (where (${STATUS_SQL}) = 'SEM_ESTOQUE')::int as "semEstoque",
              count(*) filter (where (${STATUS_SQL}) in ('BAIXO', 'CRITICO'))::int as "estoqueBaixo"
         from public.produtos p
        where p.ativo
     `),
     conexao.query(
-      `select count(*) filter (where tipo = 'ENTRADA')::int as "entradasHoje"
+      `select count(*) filter (where tipo = 'ENTRADA')::int as "entradasHoje",
+              count(*) filter (where tipo = 'SAIDA')::int as "saidasHoje"
          from public.movimentacoes
         where criado_em >= $1 and criado_em < $2`,
       [inicioDoDia, fimDoDia],
@@ -36,6 +37,7 @@ export async function obterCards({ inicioDoDia, fimDoDia }, conexao = obterPool(
 
 // Prioriza os produtos que mais precisam de reposicao: primeiro pela
 // severidade do status, depois por quem esta mais longe do minimo.
+// CA10.4: no maximo 10 itens — o restante fica na listagem completa.
 export async function obterProdutosAtencao(conexao = obterPool()) {
   const { rows } = await conexao.query(`
     select p.id, p.nome,
@@ -51,6 +53,7 @@ export async function obterProdutosAtencao(conexao = obterPool()) {
      order by ${PRIORIDADE_SQL},
               (p.estoque_minimo - p.quantidade_atual) desc,
               p.nome asc
+     limit 10
   `)
 
   return rows
