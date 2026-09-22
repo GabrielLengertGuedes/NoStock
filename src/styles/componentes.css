@@ -1772,3 +1772,38 @@
     transition: none;
   }
 }
+
+.reposicao-grupo + .reposicao-grupo {
+  margin-top: 20px;
+}
+
+.reposicao-grupo-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+/* CA13.5: imprime so o conteudo da lista, sem navegacao nem controles de tela. */
+@media print {
+  .layout-sidebar,
+  .layout-topbar,
+  .no-print {
+    display: none !important;
+  }
+
+  .layout-app {
+    display: block;
+  }
+
+  .layout-conteudo {
+    padding: 0;
+  }
+
+  .painel {
+    box-shadow: none;
+    border: none;
+  }
+}

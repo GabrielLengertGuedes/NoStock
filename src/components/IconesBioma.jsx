@@ -219,6 +219,16 @@ export function IconeRelatorios(props) {
   )
 }
 
+export function IconeReposicao(props) {
+  return (
+    <Svg {...props}>
+      <circle cx="9" cy="20" r="1.5" />
+      <circle cx="17" cy="20" r="1.5" />
+      <path d="M3 4h2l2.4 12.2a1.5 1.5 0 0 0 1.48 1.3h7.24a1.5 1.5 0 0 0 1.47-1.2L20 8H6" />
+    </Svg>
+  )
+}
+
 export function IconeCategoria({ categoria = '', ...props }) {
   const t = categoria.toLowerCase()
   if (/ração|racao|alimento|pet food|comida/.test(t)) return <IconeBone {...props} />
