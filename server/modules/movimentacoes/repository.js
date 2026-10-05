@@ -1,4 +1,5 @@
 import { obterPool } from '../../db/pool.js'
+import { condicaoBuscaPorNome, termoLiteral } from '../../shared/buscaPorNome.js'
 
 const SELECAO_LISTAGEM = `
   m.id,
@@ -21,7 +22,11 @@ const JUNCOES_LISTAGEM = `
   join public.produtos p on p.id = m.produto_id
 `
 
-function filtrar({ produtoId, usuarioId, tipo, motivo, de, ate }) {
+// Todo filtro olha so colunas de m: a contagem roda sem as juncoes da listagem.
+// A busca por nome resolve os produtos numa subconsulta, que usa o indice
+// trigram de produtos e depois ix_mov_produto_criado. Produto inativo entra:
+// a movimentacao dele continua no historico.
+function filtrar({ produtoId, busca, usuarioId, tipo, motivo, de, ate }) {
   const condicoes = []
   const valores = []
 
@@ -31,6 +36,10 @@ function filtrar({ produtoId, usuarioId, tipo, motivo, de, ate }) {
   }
 
   if (produtoId) condicoes.push(`m.produto_id = ${proximoParametro(produtoId)}`)
+  if (busca) {
+    const condicao = condicaoBuscaPorNome('pb.nome', proximoParametro(termoLiteral(busca)))
+    condicoes.push(`m.produto_id in (select pb.id from public.produtos pb where ${condicao})`)
+  }
   if (usuarioId) condicoes.push(`m.usuario_id = ${proximoParametro(usuarioId)}`)
   if (tipo) condicoes.push(`m.tipo = ${proximoParametro(tipo)}`)
   if (motivo) condicoes.push(`m.motivo = ${proximoParametro(motivo)}`)
@@ -47,8 +56,10 @@ export async function listar(filtros, conexao = obterPool()) {
   const { pagina = 1, porPagina = 20 } = filtros
   const { onde, valores } = filtrar(filtros)
 
+  // Sem as juncoes: produto_id e usuario_id sao not null com FK, entao juntar
+  // nao muda a contagem — so dobrava o custo dela numa tabela que so cresce.
   const { rows: contagem } = await conexao.query(
-    `select count(*)::int as total ${JUNCOES_LISTAGEM} ${onde}`,
+    `select count(*)::int as total from public.movimentacoes m ${onde}`,
     valores,
   )
   const total = contagem[0].total

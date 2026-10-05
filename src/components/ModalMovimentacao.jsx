@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { useRegistrarMovimentacao } from '../api/movimentacoes.js'
 import { useProdutos } from '../api/produtos.js'
+import { useAoPararDeDigitar } from '../hooks/useAoPararDeDigitar.js'
 import { BadgeStatus } from './BadgeStatus.jsx'
 import { Campo } from './Campo.jsx'
 import { Modal } from './Modal.jsx'
@@ -19,7 +20,9 @@ const MOTIVOS = {
 
 export function ModalMovimentacao({ aberto, aoFechar, tipo, produtoInicial = null }) {
   const registrar = useRegistrarMovimentacao()
-  const [buscaProduto, setBuscaProduto] = useState(produtoInicial?.nome ?? '')
+  const [textoBusca, setTextoBusca] = useState('')
+  const [termoBusca, setTermoBusca] = useState('')
+  const [produtoEscolhido, setProdutoEscolhido] = useState(null)
   const [formulario, setFormulario] = useState(() => ({
     produtoId: produtoInicial?.id ? String(produtoInicial.id) : '',
     quantidade: '',
@@ -32,15 +35,25 @@ export function ModalMovimentacao({ aberto, aoFechar, tipo, produtoInicial = nul
   const produtoFixo = produtoInicial != null
   const titulo = tipo === 'ENTRADA' ? 'Registrar entrada' : 'Registrar saída'
 
-  const consultaProdutos = useProdutos({
-    busca: produtoFixo ? undefined : buscaProduto || undefined,
-    pagina: 1,
-    porPagina: 50,
-  })
+  const buscaAdiada = useAoPararDeDigitar((texto) => setTermoBusca(texto.trim()))
+
+  // Com o produto ja definido pela tela, a lista nao aparece: nem consulta.
+  const consultaProdutos = useProdutos(
+    { busca: termoBusca || undefined, pagina: 1, porPagina: 50 },
+    { enabled: !produtoFixo },
+  )
   const produtos = consultaProdutos.data?.dados ?? []
 
+  // O escolhido fica no select mesmo que a busca mude e ele saia da lista:
+  // senao o select mostraria "Selecione" e o envio levaria um produto que
+  // ninguem esta vendo na tela.
+  const produtosNoSelect =
+    produtoEscolhido && !produtos.some((produto) => produto.id === produtoEscolhido.id)
+      ? [produtoEscolhido, ...produtos]
+      : produtos
+
   const produtoSelecionado =
-    produtoInicial ?? produtos.find((produto) => String(produto.id) === formulario.produtoId)
+    produtoInicial ?? produtosNoSelect.find((produto) => String(produto.id) === formulario.produtoId)
 
   const erro = registrar.error
   const salvando = registrar.isPending
@@ -125,8 +138,11 @@ export function ModalMovimentacao({ aberto, aoFechar, tipo, produtoInicial = nul
                 rotulo="Buscar produto"
                 type="search"
                 placeholder="Digite o nome do produto"
-                value={buscaProduto}
-                onChange={(evento) => setBuscaProduto(evento.target.value)}
+                value={textoBusca}
+                onChange={(evento) => {
+                  setTextoBusca(evento.target.value)
+                  buscaAdiada.agendar(evento.target.value)
+                }}
               />
               <Campo
                 id="movimentacao-produtoId"
@@ -138,14 +154,16 @@ export function ModalMovimentacao({ aberto, aoFechar, tipo, produtoInicial = nul
                   id="movimentacao-produtoId"
                   className="input-field"
                   value={formulario.produtoId}
-                  onChange={(evento) =>
-                    setFormulario((atual) => ({ ...atual, produtoId: evento.target.value }))
-                  }
+                  onChange={(evento) => {
+                    const id = evento.target.value
+                    setProdutoEscolhido(produtos.find((produto) => String(produto.id) === id) ?? null)
+                    setFormulario((atual) => ({ ...atual, produtoId: id }))
+                  }}
                   aria-invalid={erro?.campos?.produtoId ? 'true' : undefined}
                   required
                 >
                   <option value="">Selecione um produto</option>
-                  {produtos.map((produto) => (
+                  {produtosNoSelect.map((produto) => (
                     <option key={produto.id} value={produto.id}>
                       {produto.nome} — saldo {produto.quantidadeAtual}
                     </option>

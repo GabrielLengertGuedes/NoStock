@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useCategorias } from '../api/categorias.js'
 import { useInativarProduto, useProdutos, useValorInventario } from '../api/produtos.js'
@@ -16,6 +16,7 @@ import { ModalMovimentacao } from '../components/ModalMovimentacao.jsx'
 import { Paginacao } from '../components/Paginacao.jsx'
 import { ProdutoThumb } from '../components/ProdutoThumb.jsx'
 import { Tabela } from '../components/Tabela.jsx'
+import { useAoPararDeDigitar } from '../hooks/useAoPararDeDigitar.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
 import { skuDoProduto } from '../lib/sku.js'
@@ -23,7 +24,16 @@ import { skuDoProduto } from '../lib/sku.js'
 const MOEDA = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const FILTROS_VAZIOS = { busca: '', categoriaId: '', status: '', pagina: 1 }
 
+// Os filtros nascem da URL (?busca= vinda da busca do topo, ?status= do sino de
+// alertas). A key faz cada navegacao para /produtos recomecar por ela: sem isso,
+// clicar no sino ja estando aqui nao mudava nada, porque o estado so lia a URL
+// na primeira montagem.
 export function Produtos() {
+  const { key } = useLocation()
+  return <ListaDeProdutos key={key} />
+}
+
+function ListaDeProdutos() {
   const menu = useMenuPrincipal()
   const navegar = useNavigate()
   const [searchParams] = useSearchParams()
@@ -35,14 +45,22 @@ export function Produtos() {
 
   const [filtros, setFiltros] = useState(() => ({
     ...FILTROS_VAZIOS,
-    busca: searchParams.get('busca') ?? '',
+    busca: searchParams.get('busca')?.trim() ?? '',
     status: searchParams.get('status') ?? '',
   }))
+  const [textoBusca, setTextoBusca] = useState(filtros.busca)
   const [aExcluir, setAExcluir] = useState(null)
   const [movimentacao, setMovimentacao] = useState(null)
 
   function mudarFiltro(campo, valor) {
     setFiltros((atual) => ({ ...atual, [campo]: valor, pagina: 1 }))
+  }
+
+  const buscaAdiada = useAoPararDeDigitar((texto) => mudarFiltro('busca', texto.trim()))
+
+  function mudarBusca(texto) {
+    setTextoBusca(texto)
+    buscaAdiada.agendar(texto)
   }
 
   function confirmarExclusao() {
@@ -135,8 +153,9 @@ export function Produtos() {
       titulo="Estoque de Produtos"
       subtitulo="Gerencie o inventário em tempo real e acompanhe a disponibilidade."
       menu={menu}
-      buscaPlaceholder="Buscar produtos ou SKUs…"
-      onBusca={(termo) => mudarFiltro('busca', termo)}
+      buscaPlaceholder="Buscar produtos pelo nome…"
+      busca={textoBusca}
+      aoMudarBusca={mudarBusca}
       acoes={
         podeEditar ? (
           <Link to="/produtos/novo" className="btn btn-primary">

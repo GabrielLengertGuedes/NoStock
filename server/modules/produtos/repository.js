@@ -1,4 +1,5 @@
 import { obterPool } from '../../db/pool.js'
+import { condicaoBuscaPorNome, termoLiteral } from '../../shared/buscaPorNome.js'
 import { statusEstoqueSql } from '../../shared/statusEstoque.js'
 
 const STATUS_SQL = statusEstoqueSql('p.quantidade_atual', 'p.estoque_minimo')
@@ -46,9 +47,7 @@ function filtrar({ busca, categoriaId, fornecedorId, status, ativo }) {
     condicoes.push(`p.ativo = ${proximoParametro(ativo === 'true')}`)
   }
   if (busca) {
-    condicoes.push(
-      `public.sem_acento(lower(p.nome)) like ('%' || public.sem_acento(lower(${proximoParametro(busca)})) || '%')`,
-    )
+    condicoes.push(condicaoBuscaPorNome('p.nome', proximoParametro(termoLiteral(busca))))
   }
   if (categoriaId) {
     condicoes.push(`p.categoria_id = ${proximoParametro(categoriaId)}`)

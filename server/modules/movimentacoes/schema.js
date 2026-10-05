@@ -88,6 +88,7 @@ const dataIso = z
 export const filtrosDeListagem = z
   .object({
     produtoId: z.coerce.number().int().positive().optional(),
+    busca: z.string().trim().min(1).max(150).optional(),
     usuarioId: z.coerce.number().int().positive().optional(),
     tipo: z.enum(TIPOS).optional(),
     motivo: z.enum(MOTIVOS).optional(),

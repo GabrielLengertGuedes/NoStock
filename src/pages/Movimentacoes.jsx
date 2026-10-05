@@ -13,6 +13,7 @@ import { ModalMovimentacao } from '../components/ModalMovimentacao.jsx'
 import { Paginacao } from '../components/Paginacao.jsx'
 import { ProdutoThumb } from '../components/ProdutoThumb.jsx'
 import { Tabela } from '../components/Tabela.jsx'
+import { useAoPararDeDigitar } from '../hooks/useAoPararDeDigitar.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
 import { skuDoProduto } from '../lib/sku.js'
@@ -39,7 +40,7 @@ const MOTIVO = {
   AJUSTE_INVENTARIO: 'Ajuste de inventário',
 }
 
-const FILTROS_VAZIOS = { de: '', ate: '', produtoId: '', tipo: '', usuarioId: '', pagina: 1 }
+const FILTROS_VAZIOS = { de: '', ate: '', busca: '', produtoId: '', tipo: '', usuarioId: '', pagina: 1 }
 
 const DATA_BR = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
@@ -99,7 +100,11 @@ export function Movimentacoes() {
     ...FILTROS_VAZIOS,
     tipo: searchParams.get('tipo') ?? '',
   }))
-  const [buscaProduto, setBuscaProduto] = useState('')
+  const [textoBusca, setTextoBusca] = useState('')
+  // Guardado na escolha para continuar visivel no select mesmo quando a busca
+  // muda e ele sai da lista de opcoes — senao o select mostraria "Todos" com
+  // o filtro por produto ainda valendo.
+  const [produtoEscolhido, setProdutoEscolhido] = useState(null)
 
   // Trocar qualquer filtro volta pra pagina 1, senao a pagina atual pode nem
   // existir mais no resultado novo.
@@ -107,46 +112,60 @@ export function Movimentacoes() {
     setFiltros((atual) => ({ ...atual, [campo]: valor, pagina: 1 }))
   }
 
+  const buscaAdiada = useAoPararDeDigitar((texto) => mudarFiltro('busca', texto.trim()))
+
+  function mudarBusca(texto) {
+    setTextoBusca(texto)
+    buscaAdiada.agendar(texto)
+  }
+
+  function limparFiltros() {
+    buscaAdiada.cancelar()
+    setFiltros(FILTROS_VAZIOS)
+    setTextoBusca('')
+    setProdutoEscolhido(null)
+  }
+
   // Movimentacao de produto inativado continua no historico (CA11.6), entao o
   // filtro por produto tambem precisa enxergar os inativos.
   const consultaProdutos = useProdutos({
-    busca: buscaProduto || undefined,
+    busca: filtros.busca || undefined,
     ativo: 'todos',
     pagina: 1,
     porPagina: 50,
   })
+  const opcoesDeProduto = consultaProdutos.data?.dados ?? []
+  const produtosNoSelect =
+    produtoEscolhido && !opcoesDeProduto.some((produto) => produto.id === produtoEscolhido.id)
+      ? [produtoEscolhido, ...opcoesDeProduto]
+      : opcoesDeProduto
 
-  const consulta = useMovimentacoes({
+  function escolherProduto(id) {
+    setProdutoEscolhido(opcoesDeProduto.find((produto) => String(produto.id) === id) ?? null)
+    mudarFiltro('produtoId', id)
+  }
+
+  // A lista e os dois cards de total compartilham o mesmo recorte; so o tipo e
+  // a pagina mudam entre eles.
+  const recorte = {
     de: instante(filtros.de, '00:00:00.000'),
     ate: instante(filtros.ate, '23:59:59.999'),
+    busca: filtros.busca || undefined,
     produtoId: filtros.produtoId || undefined,
-    tipo: filtros.tipo || undefined,
     usuarioId: podeFiltrarPorFuncionario ? filtros.usuarioId || undefined : undefined,
+  }
+  const consulta = useMovimentacoes({
+    ...recorte,
+    tipo: filtros.tipo || undefined,
     pagina: filtros.pagina,
   })
-  const totaisEntrada = useMovimentacoes({
-    de: instante(filtros.de, '00:00:00.000'),
-    ate: instante(filtros.ate, '23:59:59.999'),
-    produtoId: filtros.produtoId || undefined,
-    tipo: 'ENTRADA',
-    usuarioId: podeFiltrarPorFuncionario ? filtros.usuarioId || undefined : undefined,
-    pagina: 1,
-    porPagina: 1,
-  })
-  const totaisSaida = useMovimentacoes({
-    de: instante(filtros.de, '00:00:00.000'),
-    ate: instante(filtros.ate, '23:59:59.999'),
-    produtoId: filtros.produtoId || undefined,
-    tipo: 'SAIDA',
-    usuarioId: podeFiltrarPorFuncionario ? filtros.usuarioId || undefined : undefined,
-    pagina: 1,
-    porPagina: 1,
-  })
+  const totaisEntrada = useMovimentacoes({ ...recorte, tipo: 'ENTRADA', pagina: 1, porPagina: 1 })
+  const totaisSaida = useMovimentacoes({ ...recorte, tipo: 'SAIDA', pagina: 1, porPagina: 1 })
 
   const { dados: movimentacoes = [], meta } = consulta.data ?? {}
-  const comFiltro = Object.entries(filtros).some(
-    ([campo, valor]) => campo !== 'pagina' && valor !== '',
-  )
+  const comFiltro =
+    textoBusca.trim() !== '' ||
+    Object.entries(filtros).some(([campo, valor]) => campo !== 'pagina' && valor !== '')
 
   // RN03: o log e imutavel — nenhuma coluna de acao, nem editar nem excluir.
   const colunas = [
@@ -185,7 +204,8 @@ export function Movimentacoes() {
       subtitulo="Registro imutável de entradas, saídas e ajustes do dia a dia."
       menu={menu}
       buscaPlaceholder="Pesquisar por produto…"
-      onBusca={(termo) => setBuscaProduto(termo)}
+      busca={textoBusca}
+      aoMudarBusca={mudarBusca}
       acoes={
         autenticado ? (
           <>
@@ -271,8 +291,8 @@ export function Movimentacoes() {
           rotulo="Buscar produto"
           type="search"
           placeholder="Nome do produto"
-          value={buscaProduto}
-          onChange={(evento) => setBuscaProduto(evento.target.value)}
+          value={textoBusca}
+          onChange={(evento) => mudarBusca(evento.target.value)}
         />
 
         <Campo id="movimentacoes-produto" rotulo="Produto">
@@ -280,10 +300,10 @@ export function Movimentacoes() {
             id="movimentacoes-produto"
             className="input-field"
             value={filtros.produtoId}
-            onChange={(evento) => mudarFiltro('produtoId', evento.target.value)}
+            onChange={(evento) => escolherProduto(evento.target.value)}
           >
             <option value="">Todos</option>
-            {(consultaProdutos.data?.dados ?? []).map((produto) => (
+            {produtosNoSelect.map((produto) => (
               <option key={produto.id} value={produto.id}>
                 {produto.nome}
               </option>
@@ -302,10 +322,7 @@ export function Movimentacoes() {
           <button
             type="button"
             className="btn btn-secondary"
-            onClick={() => {
-              setFiltros(FILTROS_VAZIOS)
-              setBuscaProduto('')
-            }}
+            onClick={limparFiltros}
           >
             Limpar filtros
           </button>
