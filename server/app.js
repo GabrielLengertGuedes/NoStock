@@ -44,6 +44,10 @@ export function criarApp() {
     app.use(cors({ origin: env.corsOrigin, credentials: true }))
   }
 
+  // Front compilado pelo `vite build`. Fica antes da sessao: arquivo estatico
+  // nao precisa ir ao banco buscar a sessao de ninguem.
+  if (env.producao) app.use(express.static(join(raiz, 'dist')))
+
   app.use(express.json({ limit: '1mb' }))
 
   const PgSession = connectPgSimple(session)
@@ -88,6 +92,12 @@ export function criarApp() {
   app.use('/api', (_req, _res, next) => {
     next(new AppError('NAO_ENCONTRADO', 'Rota inexistente.'))
   })
+
+  // O resto e rota do React Router (/produtos, /relatorios...): quem decide a
+  // tela e o front, entao toda URL fora da /api recebe o index.html.
+  if (env.producao) {
+    app.get('/{*caminho}', (_req, res) => res.sendFile(join(raiz, 'dist', 'index.html')))
+  }
 
   app.use(errorHandler)
 
