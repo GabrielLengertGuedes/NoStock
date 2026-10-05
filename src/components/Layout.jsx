@@ -1,7 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 
-import { IconeBusca, IconeSino } from './IconesBioma.jsx'
+import { IconeBusca } from './IconesBioma.jsx'
+import { Notificacoes } from './Notificacoes.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 
 export function Layout({
@@ -108,15 +109,7 @@ export function Layout({
           </form>
 
           <div className="layout-topbar-direita">
-            <button
-              type="button"
-              className="layout-icone-btn"
-              aria-label="Notificações"
-              title="Alertas de estoque"
-              onClick={() => navegar('/produtos?status=PRECISA_REPOR')}
-            >
-              <IconeSino size={18} />
-            </button>
+            {usuario && <Notificacoes />}
             {usuario && (
               <span className="layout-avatar layout-avatar-sm" aria-hidden="true" title={usuario.nome}>
                 {inicial}

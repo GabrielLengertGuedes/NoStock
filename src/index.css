@@ -281,6 +281,9 @@ h6 {
 .w-full {
   width: 100%;
 }
+.text-center {
+  text-align: center;
+}
 
 .container {
   width: min(100%, 1200px);

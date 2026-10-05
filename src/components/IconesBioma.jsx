@@ -150,6 +150,24 @@ export function IconeAlerta(props) {
   )
 }
 
+export function IconeCheck(props) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.5 12 2.5 2.5 4.5-5" />
+    </Svg>
+  )
+}
+
+export function IconeFechar(props) {
+  return (
+    <Svg {...props}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </Svg>
+  )
+}
+
 export function IconeCaixaVazia(props) {
   return (
     <Svg {...props}>
