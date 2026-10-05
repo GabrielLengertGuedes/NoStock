@@ -4,6 +4,9 @@ export class ErroApi extends Error {
   constructor({ codigo, mensagem, campos = null, status = 0 }) {
     super(mensagem)
     this.name = 'ErroApi'
+    // As telas leem `.mensagem` (23 lugares); sem isto todo erro da API
+    // chegava vazio e o aviso nem aparecia (ex.: senha errada no login).
+    this.mensagem = mensagem
     this.codigo = codigo
     this.campos = campos
     this.status = status

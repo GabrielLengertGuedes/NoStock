@@ -98,7 +98,7 @@ export function Reposicao() {
         </Campo>
       </div>
 
-      <section className="kpi-grid kpi-grid-3" aria-label="Resumo da reposição">
+      <section className="kpi-grid kpi-grid-2" aria-label="Resumo da reposição">
         <KpiCard
           tom={totalItens > 0 ? 'urgente' : 'mint'}
           rotulo="Itens a repor"

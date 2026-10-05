@@ -1,6 +1,9 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Link, Navigate, Route, Routes } from 'react-router-dom'
 
+import { EstadoVazio } from '../components/EstadoVazio.jsx'
+import { Layout } from '../components/Layout.jsx'
 import { useAuth } from '../hooks/useAuth.js'
+import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
 import { Categorias } from '../pages/Categorias.jsx'
 import { Dashboard } from '../pages/Dashboard.jsx'
 import { Fornecedores } from '../pages/Fornecedores.jsx'
@@ -14,13 +17,19 @@ import { Usuarios } from '../pages/Usuarios.jsx'
 import { RotaProtegida } from './RotaProtegida.jsx'
 
 function NaoEncontrada() {
+  const menu = useMenuPrincipal()
   return (
-    <div className="container mt-base text-center">
-      <h1 className="text-h2">Página não encontrada</h1>
-      <p className="text-body" style={{ color: 'var(--slate)' }}>
-        O endereço digitado não existe no sistema.
-      </p>
-    </div>
+    <Layout menu={menu} esconderTitulo>
+      <EstadoVazio
+        titulo="Página não encontrada"
+        descricao="O endereço digitado não existe no sistema."
+        acao={
+          <Link to="/dashboard" className="btn btn-primary">
+            Voltar ao dashboard
+          </Link>
+        }
+      />
+    </Layout>
   )
 }
 

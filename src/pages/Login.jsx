@@ -1,19 +1,43 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 
 import { ErroApi } from '../api/client.js'
-import { IconeOlho, IconeOlhoOff } from '../components/IconesBioma.jsx'
+import { IconeAlerta, IconeOlho, IconeOlhoOff } from '../components/IconesBioma.jsx'
 import { useAuth } from '../hooks/useAuth.js'
+import { useToast } from '../hooks/useToast.js'
+import { validarLogin } from '../lib/validarLogin.js'
+
+// Cada falha do POST /auth/login vira um aviso que diz o que fazer a seguir.
+function avisoDeFalha(falha) {
+  if (!(falha instanceof ErroApi)) {
+    return { titulo: 'Não foi possível entrar', mensagem: 'Tente de novo em instantes.' }
+  }
+  switch (falha.codigo) {
+    case 'NAO_AUTENTICADO':
+      return { titulo: 'E-mail ou senha incorretos', mensagem: 'Confira os dados e tente de novo.' }
+    case 'MUITAS_TENTATIVAS':
+      return { titulo: 'Acesso bloqueado por alguns minutos', mensagem: falha.mensagem }
+    case 'SEM_RESPOSTA':
+      return { titulo: 'Sem conexão com o servidor', mensagem: falha.mensagem }
+    default:
+      return { titulo: 'Não foi possível entrar', mensagem: falha.mensagem }
+  }
+}
 
 export function Login({ modo = 'pagina' }) {
   const { autenticado, login, avisoSessao, limparAvisoSessao, loginExigido } = useAuth()
+  const toast = useToast()
   const navegar = useNavigate()
   const localizacao = useLocation()
   const destino = localizacao.state?.from?.pathname || '/dashboard'
+  const campoEmail = useRef(null)
+  const campoSenha = useRef(null)
 
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
-  const [erro, setErro] = useState(null)
+  const [falha, setFalha] = useState(null)
+  const [errosCampo, setErrosCampo] = useState({})
+  const [credenciaisInvalidas, setCredenciaisInvalidas] = useState(false)
   const [avisoLocal, setAvisoLocal] = useState(null)
   const [enviando, setEnviando] = useState(false)
   const [mostrarSenha, setMostrarSenha] = useState(false)
@@ -23,22 +47,46 @@ export function Login({ modo = 'pagina' }) {
     return <Navigate to={destino} replace />
   }
 
+  function limparErro(campo) {
+    setErrosCampo((atual) => ({ ...atual, [campo]: undefined }))
+    setCredenciaisInvalidas(false)
+    setFalha(null)
+  }
+
   async function enviar(evento) {
     evento.preventDefault()
-    setErro(null)
+    setFalha(null)
     setAvisoLocal(null)
+    setCredenciaisInvalidas(false)
     limparAvisoSessao()
-    setEnviando(true)
 
+    const errosLocais = validarLogin({ email, senha })
+    setErrosCampo(errosLocais)
+    if (errosLocais.email || errosLocais.senha) {
+      ;(errosLocais.email ? campoEmail : campoSenha).current?.focus()
+      return
+    }
+
+    setEnviando(true)
     try {
-      await login({ email, senha })
+      const usuario = await login({ email: email.trim(), senha })
+      const primeiroNome = usuario?.nome?.trim().split(' ')[0]
+      toast.mostrar({
+        titulo: modo === 'bloqueio' ? 'Sessão retomada' : 'Login realizado',
+        mensagem: primeiroNome ? `Bem-vindo de volta, ${primeiroNome}!` : 'Bem-vindo de volta!',
+      })
       if (modo === 'pagina') navegar(destino, { replace: true })
-    } catch (falha) {
-      const mensagem =
-        falha instanceof ErroApi
-          ? falha.mensagem
-          : 'Não foi possível entrar. Tente de novo.'
-      setErro(mensagem)
+    } catch (erro) {
+      if (erro instanceof ErroApi && erro.campos) {
+        setErrosCampo(erro.campos)
+        ;(erro.campos.email ? campoEmail : campoSenha).current?.focus()
+      } else {
+        setFalha(avisoDeFalha(erro))
+        if (erro instanceof ErroApi && erro.codigo === 'NAO_AUTENTICADO') {
+          setCredenciaisInvalidas(true)
+          campoSenha.current?.select()
+        }
+      }
     } finally {
       setEnviando(false)
     }
@@ -46,13 +94,12 @@ export function Login({ modo = 'pagina' }) {
 
   function lembrarEsqueciSenha(evento) {
     evento.preventDefault()
+    setFalha(null)
     setAvisoLocal('Para redefinir a senha, peça a um gestor na tela de Usuários.')
   }
 
-  function ssoIndisponivel(evento) {
-    evento.preventDefault()
-    setAvisoLocal('Login com Google ou Apple não faz parte deste MVP. Use e-mail e senha.')
-  }
+  const emailInvalido = Boolean(errosCampo.email) || credenciaisInvalidas
+  const senhaInvalida = Boolean(errosCampo.senha) || credenciaisInvalidas
 
   const formulario = (
     <>
@@ -69,11 +116,23 @@ export function Login({ modo = 'pagina' }) {
         </p>
       </header>
 
-      {(avisoSessao || erro || avisoLocal) && (
-        <p className={`login-aviso text-body-sm${avisoLocal && !erro ? ' login-aviso-info' : ''}`} role="alert">
-          {erro || avisoLocal || avisoSessao}
+      {falha ? (
+        <div className="login-aviso" role="alert">
+          <IconeAlerta size={18} />
+          <div>
+            <p className="login-aviso-titulo">{falha.titulo}</p>
+            {falha.mensagem ? <p>{falha.mensagem}</p> : null}
+          </div>
+        </div>
+      ) : avisoSessao ? (
+        <p className="login-aviso text-body-sm" role="alert">
+          {avisoSessao}
         </p>
-      )}
+      ) : avisoLocal ? (
+        <p className="login-aviso login-aviso-info text-body-sm" role="status">
+          {avisoLocal}
+        </p>
+      ) : null}
 
       <form className="login-formulario" onSubmit={enviar} noValidate>
         <div className="login-campo">
@@ -91,15 +150,26 @@ export function Login({ modo = 'pagina' }) {
             />
             <input
               id="email"
+              ref={campoEmail}
               className="input-field login-input"
               type="email"
               autoComplete="username"
               placeholder="nome@bioma.com.br"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                limparErro('email')
+              }}
+              aria-invalid={emailInvalido || undefined}
+              aria-describedby={errosCampo.email ? 'email-erro' : undefined}
               required
             />
           </div>
+          {errosCampo.email ? (
+            <p id="email-erro" className="login-campo-erro">
+              {errosCampo.email}
+            </p>
+          ) : null}
         </div>
 
         <div className="login-campo">
@@ -122,12 +192,18 @@ export function Login({ modo = 'pagina' }) {
             />
             <input
               id="senha"
+              ref={campoSenha}
               className="input-field login-input login-input-senha"
               type={mostrarSenha ? 'text' : 'password'}
               autoComplete="current-password"
               placeholder="••••••••"
               value={senha}
-              onChange={(e) => setSenha(e.target.value)}
+              onChange={(e) => {
+                setSenha(e.target.value)
+                limparErro('senha')
+              }}
+              aria-invalid={senhaInvalida || undefined}
+              aria-describedby={errosCampo.senha ? 'senha-erro' : undefined}
               required
             />
             <button
@@ -139,6 +215,11 @@ export function Login({ modo = 'pagina' }) {
               {mostrarSenha ? <IconeOlhoOff size={18} /> : <IconeOlho size={18} />}
             </button>
           </div>
+          {errosCampo.senha ? (
+            <p id="senha-erro" className="login-campo-erro">
+              {errosCampo.senha}
+            </p>
+          ) : null}
         </div>
 
         <label className="login-check">
@@ -156,28 +237,17 @@ export function Login({ modo = 'pagina' }) {
           </p>
         )}
 
-        <button type="submit" className="btn btn-primary login-submit" disabled={enviando}>
+        <button
+          type="submit"
+          className={`btn btn-primary login-submit${enviando ? ' btn-carregando' : ''}`}
+          disabled={enviando}
+        >
           <span>{enviando ? 'Entrando…' : 'Entrar no Sistema'}</span>
           {!enviando && (
             <img src="/brand/icon-arrow.svg" alt="" width={16} height={16} aria-hidden="true" />
           )}
         </button>
       </form>
-
-      <div className="login-divisor" aria-hidden="true">
-        <span>ou continue com</span>
-      </div>
-
-      <div className="login-sso">
-        <button type="button" className="btn btn-secondary login-sso-btn" onClick={ssoIndisponivel}>
-          <img src="/brand/icon-google.svg" alt="" width={18} height={18} aria-hidden="true" />
-          Google
-        </button>
-        <button type="button" className="btn btn-secondary login-sso-btn" onClick={ssoIndisponivel}>
-          <img src="/brand/icon-apple.svg" alt="" width={18} height={18} aria-hidden="true" />
-          Apple
-        </button>
-      </div>
     </>
   )
 
@@ -198,7 +268,7 @@ export function Login({ modo = 'pagina' }) {
           <section className="login-hero" aria-label="Bioma PetShop">
             <img
               className="login-hero-foto"
-              src="/brand/login-hero.png"
+              src="/brand/login-hero.webp"
               alt="Cachorro e gato da Bioma PetShop"
             />
             <div className="login-hero-conteudo">
@@ -225,21 +295,6 @@ export function Login({ modo = 'pagina' }) {
 
           <section className="login-form-painel">{formulario}</section>
         </div>
-
-        <footer className="login-rodape-links">
-          <nav className="login-rodape-nav" aria-label="Institucional">
-            <button type="button" className="login-rodape-link" onClick={() => setAvisoLocal('Termos de uso estarão disponíveis na versão publicada.')}>
-              Termos
-            </button>
-            <button type="button" className="login-rodape-link" onClick={() => setAvisoLocal('A política de privacidade estará disponível na versão publicada.')}>
-              Privacidade
-            </button>
-            <button type="button" className="login-rodape-link" onClick={() => setAvisoLocal('Para suporte, fale com um gestor da loja.')}>
-              Suporte
-            </button>
-          </nav>
-          <p>© 2026 Bioma Pet Shop · NoStock</p>
-        </footer>
       </div>
     </div>
   )

@@ -46,7 +46,7 @@ export function Dashboard() {
   const cards = dashboard.data?.cards
   const produtosAtencao = dashboard.data?.produtosAtencao ?? []
   const produtosResumo = resumo.data?.dados ?? []
-  const primeiroNome = usuario?.nome?.split(' ')[0] || 'de volta'
+  const primeiroNome = usuario?.nome?.trim().split(' ')[0]
 
   const totalProdutos = cards?.totalProdutos ?? 0
   const emAtencao = (cards?.estoqueBaixo ?? 0) + (cards?.semEstoque ?? 0)
@@ -174,7 +174,7 @@ export function Dashboard() {
 
   return (
     <Layout
-      titulo={`Bem-vindo de volta, ${primeiroNome}!`}
+      titulo={primeiroNome ? `Bem-vindo de volta, ${primeiroNome}!` : 'Bem-vindo de volta!'}
       subtitulo={`Seu inventário está ${percentualOtimo}% otimizado. Priorize os alertas e registre entradas e saídas.`}
       menu={menu}
     >
@@ -253,7 +253,17 @@ export function Dashboard() {
           dados={produtosResumo}
           chaveDaLinha={(p) => p.id}
           carregando={resumo.isLoading}
-          vazio="Nenhum produto cadastrado ainda."
+          vazio={
+            <EstadoVazio
+              titulo="Nenhum produto cadastrado ainda"
+              descricao="Cadastre o primeiro item para acompanhar o estoque por aqui."
+              acao={
+                <Link to="/produtos/novo" className="btn btn-primary">
+                  Cadastrar produto
+                </Link>
+              }
+            />
+          }
         />
       </section>
 
