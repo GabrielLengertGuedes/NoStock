@@ -1,0 +1,13 @@
+# O build faz `COPY . .`: sem isto, o .env local (com a senha do banco) e o
+# node_modules do macOS/Windows iriam parar dentro da imagem.
+node_modules
+dist
+.git
+.github
+.env*
+!.env.example
+db/backups
+coverage
+tests
+.DS_Store
+.vscode
