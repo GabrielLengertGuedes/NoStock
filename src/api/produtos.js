@@ -1,13 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from './client.js'
 
 export const CHAVE = ['produtos']
 
-export function useProdutos(filtros) {
+// keepPreviousData: ao trocar filtro, busca ou pagina, a lista atual fica na
+// tela ate a nova chegar, em vez de piscar vazia a cada consulta.
+export function useProdutos(filtros, { enabled = true } = {}) {
   return useQuery({
     queryKey: [...CHAVE, filtros],
     queryFn: () => api.get('/produtos', { params: filtros }),
+    placeholderData: keepPreviousData,
+    enabled,
   })
 }
 

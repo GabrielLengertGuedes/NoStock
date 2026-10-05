@@ -146,6 +146,15 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
     expect(resposta.body.dados.map((p) => p.nome)).toEqual(['Ração Filhote Sabor Frango'])
   })
 
+  it('trata % e _ da busca como texto, não como curinga', async () => {
+    for (const termo of ['%', '_', 'ra_ao']) {
+      const resposta = await listar(`?busca=${encodeURIComponent(termo)}`)
+
+      expect(resposta.status).toBe(200)
+      expect(resposta.body.dados).toHaveLength(0)
+    }
+  })
+
   it('filtra por categoria', async () => {
     const resposta = await listar(`?categoriaId=${categoriaRacao}`)
 

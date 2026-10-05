@@ -10,13 +10,20 @@ export function Layout({
   acoes,
   menu = [],
   children,
-  buscaPlaceholder = 'Buscar produtos, categorias…',
-  onBusca,
+  buscaPlaceholder = 'Buscar produtos…',
+  busca,
+  aoMudarBusca,
   esconderTitulo = false,
 }) {
   const { usuario, logout } = useAuth()
   const navegar = useNavigate()
-  const [busca, setBusca] = useState('')
+  const [buscaLivre, setBuscaLivre] = useState('')
+
+  // Tela com busca propria (Produtos, Movimentacoes) controla o campo: ele
+  // mostra o termo que esta filtrando e a tela pesquisa enquanto se digita.
+  // Nas demais, o Enter leva o termo para a busca de Produtos.
+  const buscaControlada = typeof aoMudarBusca === 'function'
+  const valorDaBusca = buscaControlada ? (busca ?? '') : buscaLivre
 
   const inicial = usuario?.nome?.trim()?.charAt(0)?.toUpperCase() || '?'
   const papel =
@@ -24,12 +31,14 @@ export function Layout({
 
   function enviarBusca(evento) {
     evento.preventDefault()
-    if (typeof onBusca === 'function') {
-      onBusca(busca)
-      return
-    }
-    const termo = busca.trim()
+    if (buscaControlada) return
+    const termo = buscaLivre.trim()
     if (termo) navegar(`/produtos?busca=${encodeURIComponent(termo)}`)
+  }
+
+  function mudarBusca(evento) {
+    if (buscaControlada) aoMudarBusca(evento.target.value)
+    else setBuscaLivre(evento.target.value)
   }
 
   return (
@@ -92,8 +101,8 @@ export function Layout({
               type="search"
               className="layout-busca-campo"
               placeholder={buscaPlaceholder}
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
+              value={valorDaBusca}
+              onChange={mudarBusca}
               aria-label="Busca"
             />
           </form>

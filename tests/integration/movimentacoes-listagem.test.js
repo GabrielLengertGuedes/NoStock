@@ -119,6 +119,28 @@ describe.skipIf(!temBanco())('GET /api/movimentacoes e /api/produtos/:id/movimen
     expect(resposta.body.dados[0].produto.nome).toBe('Produto Inativo Listagem')
   })
 
+  it('busca pelo nome do produto, sem acento e em qualquer caixa, com o total coerente', async () => {
+    const cliente = await logar()
+
+    const resposta = await cliente.get('/api/movimentacoes').query({ busca: 'PRODÚTO ativo' })
+
+    expect(resposta.status).toBe(200)
+    expect(resposta.body.dados).toHaveLength(2)
+    expect(resposta.body.dados.every((m) => m.produtoId === produtoAtivoId)).toBe(true)
+    expect(resposta.body.meta.total).toBe(2)
+  })
+
+  it('a busca por nome alcanca produto inativado e combina com os outros filtros', async () => {
+    const cliente = await logar()
+
+    const inativo = await cliente.get('/api/movimentacoes').query({ busca: 'inativo' })
+    expect(inativo.body.dados.map((m) => m.produtoId)).toEqual([produtoInativoId])
+
+    const comTipo = await cliente.get('/api/movimentacoes').query({ busca: 'listagem', tipo: 'SAIDA' })
+    expect(comTipo.body.dados).toHaveLength(1)
+    expect(comTipo.body.meta.total).toBe(1)
+  })
+
   it('pagina resultados', async () => {
     const cliente = await logar()
 
