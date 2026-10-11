@@ -1,5 +1,5 @@
 -- NoStock — seed
--- Cria apenas o gestor inicial e as categorias base. Dados de demonstracao ficam em seed-demo.sql.
+-- Cria apenas as categorias base. O gestor inicial e criado a mao (ver abaixo).
 -- Reexecutavel.
 
 -- O gestor inicial ja foi criado direto no banco. Nao existe `npm run seed`.

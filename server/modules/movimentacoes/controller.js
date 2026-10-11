@@ -4,14 +4,14 @@ import * as servico from './service.js'
 export async function registrar(req, res) {
   const { tipo, ...dados } = req.validado.body
 
-  if (tipo === 'AJUSTE' && req.session.papel !== 'GESTOR') {
+  if (tipo === 'AJUSTE' && req.usuario.papel !== 'GESTOR') {
     throw new AppError('SEM_PERMISSAO', 'Acesso restrito a gestores.')
   }
 
   const movimentacao = await servico.registrar({
     ...dados,
     tipo,
-    usuarioId: req.session.usuarioId,
+    usuarioId: req.usuario.id,
   })
 
   res.status(201).json({ dados: movimentacao })

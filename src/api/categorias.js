@@ -1,41 +1,39 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 import { api } from './client.js'
 
 export const CHAVE = ['categorias']
 
-export function useCategorias() {
+// Por padrao so as ativas: e o que os selects de produto podem oferecer.
+export function useCategorias({ incluirInativas = false } = {}) {
   return useQuery({
-    queryKey: CHAVE,
-    queryFn: async () => (await api.get('/categorias')).dados,
+    queryKey: [...CHAVE, { incluirInativas }],
+    queryFn: async () =>
+      (await api.get('/categorias', { params: incluirInativas ? { incluirInativas: 'true' } : {} })).dados,
   })
 }
 
-function useAoConcluir() {
-  const cliente = useQueryClient()
-  return () => cliente.invalidateQueries({ queryKey: CHAVE })
-}
-
+// Invalidacao do cache depois de cada escrita: ver queryClient.js.
 export function useCriarCategoria() {
-  const aoConcluir = useAoConcluir()
   return useMutation({
     mutationFn: async (dados) => (await api.post('/categorias', dados)).dados,
-    onSuccess: aoConcluir,
   })
 }
 
 export function useAtualizarCategoria() {
-  const aoConcluir = useAoConcluir()
   return useMutation({
     mutationFn: async ({ id, ...dados }) => (await api.put(`/categorias/${id}`, dados)).dados,
-    onSuccess: aoConcluir,
   })
 }
 
 export function useInativarCategoria() {
-  const aoConcluir = useAoConcluir()
   return useMutation({
     mutationFn: (id) => api.delete(`/categorias/${id}`),
-    onSuccess: aoConcluir,
+  })
+}
+
+export function useReativarCategoria() {
+  return useMutation({
+    mutationFn: (id) => api.post(`/categorias/${id}/reativar`),
   })
 }

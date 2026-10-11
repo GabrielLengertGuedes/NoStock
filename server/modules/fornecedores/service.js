@@ -70,3 +70,14 @@ export async function inativar(id) {
 
   throw new AppError('REGRA_NEGOCIO', 'Esse fornecedor já está inativo.')
 }
+
+export async function reativar(id) {
+  const existente = await repositorio.buscarPorId(id)
+  if (!existente) throw naoEncontrado()
+  if (existente.ativo) throw new AppError('REGRA_NEGOCIO', 'Esse fornecedor já está ativo.')
+
+  // Enquanto ele estava inativo, outro fornecedor ativo pode ter ficado com o nome.
+  await recusarSeNomeRepetido(existente.nome, id)
+
+  await repositorio.reativar(id)
+}

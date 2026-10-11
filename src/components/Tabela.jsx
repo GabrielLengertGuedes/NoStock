@@ -1,12 +1,33 @@
+import { mensagemDoErro } from '../api/client.js'
 import { EstadoVazio } from './EstadoVazio.jsx'
 
 // colunas: [{ chave, titulo, alinhamento, render }]
-export function Tabela({ colunas, dados, chaveDaLinha = (item) => item.id, carregando = false, vazio }) {
+// erro: o error da consulta. Sem dados para mostrar, ele vence o estado vazio —
+// senao uma falha da API aparecia como "nenhum produto" ou "tudo em dia".
+export function Tabela({
+  colunas,
+  dados,
+  chaveDaLinha = (item) => item.id,
+  carregando = false,
+  vazio,
+  erro = null,
+}) {
   if (carregando) {
     return (
       <p className="text-body" style={{ color: 'var(--slate)' }} role="status">
         Carregando…
       </p>
+    )
+  }
+
+  if (dados.length === 0 && erro) {
+    return (
+      <div role="alert">
+        <EstadoVazio
+          titulo="Não foi possível carregar"
+          descricao={mensagemDoErro(erro)}
+        />
+      </div>
     )
   }
 

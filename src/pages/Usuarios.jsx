@@ -17,6 +17,7 @@ import { Layout } from '../components/Layout.jsx'
 import { MenuAcoes } from '../components/MenuAcoes.jsx'
 import { Modal } from '../components/Modal.jsx'
 import { Tabela } from '../components/Tabela.jsx'
+import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
 
 const FORM_VAZIO = { nome: '', email: '', senha: '', papel: 'OPERADOR' }
@@ -27,6 +28,7 @@ function rotuloPapel(papel) {
 
 export function Usuarios() {
   const menu = useMenuPrincipal()
+  const { usuario: eu, recarregarSessao } = useAuth()
   const [filtroAtivo, setFiltroAtivo] = useState('true')
   const consulta = useUsuarios(filtroAtivo)
   const criar = useCriarUsuario()
@@ -73,7 +75,19 @@ export function Usuarios() {
           papel: formulario.papel,
         })
 
-    acao.then(() => setEmEdicao(null)).catch(() => {})
+    const editandoEu = emEdicao?.id === eu?.id
+    acao
+      .then(() => {
+        setEmEdicao(null)
+        if (editandoEu) recarregarSessao()
+      })
+      .catch(() => {})
+  }
+
+  function abrirInativacao(usuario) {
+    // Sem o reset, o erro da ultima tentativa aparecia no modal da proxima.
+    inativar.reset()
+    setAInativar(usuario)
   }
 
   function confirmarInativacao() {
@@ -140,7 +154,10 @@ export function Usuarios() {
                   setARedefinir(usuario)
                 },
               },
-              { rotulo: 'Inativar', onClick: () => setAInativar(usuario), perigo: true },
+              // Inativar a si mesmo derrubaria a propria sessao no meio do uso.
+              ...(usuario.id === eu?.id
+                ? []
+                : [{ rotulo: 'Inativar', onClick: () => abrirInativacao(usuario), perigo: true }]),
             ]
           : [
               {
@@ -206,12 +223,6 @@ export function Usuarios() {
         </div>
       </div>
 
-      {consulta.isError && (
-        <p className="campo-erro text-body" role="alert">
-          {consulta.error.mensagem}
-        </p>
-      )}
-
       {reativar.error && (
         <p className="campo-erro text-body" role="alert">
           {reativar.error.mensagem}
@@ -231,6 +242,7 @@ export function Usuarios() {
           colunas={colunas}
           dados={lista}
           carregando={consulta.isPending}
+          erro={consulta.error}
           vazio={
             <EstadoVazio
               titulo="Nenhum usuário neste filtro"
@@ -275,6 +287,7 @@ export function Usuarios() {
             rotulo="E-mail"
             type="email"
             obrigatorio
+            autoComplete="off"
             value={formulario.email}
             onChange={(e) => setFormulario({ ...formulario, email: e.target.value })}
             erro={erroDoServidor?.campos?.email}
@@ -285,6 +298,7 @@ export function Usuarios() {
               rotulo="Senha inicial"
               type="password"
               obrigatorio
+              autoComplete="new-password"
               ajuda="Mínimo de 8 caracteres."
               value={formulario.senha}
               onChange={(e) => setFormulario({ ...formulario, senha: e.target.value })}
@@ -383,6 +397,7 @@ export function Usuarios() {
             rotulo="Senha nova"
             type="password"
             obrigatorio
+            autoComplete="new-password"
             ajuda="Mínimo de 8 caracteres."
             value={senhaNova}
             onChange={(e) => setSenhaNova(e.target.value)}

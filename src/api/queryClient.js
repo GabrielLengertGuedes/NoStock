@@ -1,12 +1,13 @@
 import { MutationCache, QueryClient } from '@tanstack/react-query'
 
-import { CHAVE as CHAVE_DASHBOARD } from './dashboard.js'
-
 export const queryClient = new QueryClient({
-  // Toda escrita (movimentação, produto, categoria) mexe nos cards do
-  // dashboard e no sino de alertas: sem isso eles ficavam com o número antigo.
+  // Toda escrita invalida todo o cache. Uma movimentacao mexe em produtos,
+  // dashboard, sino, reposicao, relatorios e categorias; renomear categoria ou
+  // fornecedor aparece em produtos e na reposicao. Listar quem depende de quem
+  // deixava sempre alguma tela com o numero antigo. So as consultas montadas
+  // buscam de novo na hora; as outras so quando voltarem para a tela.
   mutationCache: new MutationCache({
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: CHAVE_DASHBOARD }),
+    onSuccess: () => queryClient.invalidateQueries(),
   }),
   defaultOptions: {
     queries: {

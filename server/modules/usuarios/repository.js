@@ -39,7 +39,7 @@ export async function listar({ ativo = 'true' } = {}, conexao = obterPool()) {
     ativo === 'todos' ? '' : ativo === 'false' ? 'where not ativo' : 'where ativo'
 
   const { rows } = await conexao.query(
-    `select ${COLUNAS_PUBLICAS} from public.usuarios ${filtro} order by nome`,
+    `select ${COLUNAS_PUBLICAS} from public.usuarios ${filtro} order by nome, id`,
   )
   return rows
 }
@@ -105,9 +105,23 @@ export async function reativar(id, conexao = obterPool()) {
   return rows[0] ?? null
 }
 
-export async function contarGestoresAtivos(conexao = obterPool()) {
+// Trava as linhas dos gestores ativos ate o fim da transacao: dois pedidos
+// simultaneos, cada um inativando um dos dois ultimos gestores, nao podem os
+// dois contar "2" e passar. O segundo espera e reconta sem o primeiro.
+export async function contarGestoresAtivosTravando(conexao) {
   const { rows } = await conexao.query(
-    `select count(*)::int as total from public.usuarios where papel = 'GESTOR' and ativo`,
+    `select id from public.usuarios where papel = 'GESTOR' and ativo for update`,
   )
-  return rows[0].total
+  return rows.length
+}
+
+// Derruba as sessoes abertas do usuario. `exceto` preserva a sessao de quem
+// fez a troca de senha, para ele nao ser deslogado pela propria acao.
+export async function encerrarSessoes(usuarioId, { exceto = null } = {}, conexao = obterPool()) {
+  await conexao.query(
+    `delete from public."session"
+      where sess->>'usuarioId' = $1::text
+        and ($2::text is null or sid <> $2::text)`,
+    [usuarioId, exceto],
+  )
 }

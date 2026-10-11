@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 
+import { mensagemDoErro } from '../api/client.js'
 import {
   useCategoriasRelatorio,
   useGiroRelatorio,
@@ -13,8 +14,8 @@ import { KpiCard } from '../components/KpiCard.jsx'
 import { Layout } from '../components/Layout.jsx'
 import { Tabela } from '../components/Tabela.jsx'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
+import { MOEDA, instante } from '../lib/formatos.js'
 
-const MOEDA = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const NUMERO = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 const VISOES_RANKING = [
@@ -27,15 +28,6 @@ function paraDiaLocal(data) {
   const mes = String(data.getMonth() + 1).padStart(2, '0')
   const dia = String(data.getDate()).padStart(2, '0')
   return `${ano}-${mes}-${dia}`
-}
-
-// O usuario escolhe o dia; o periodo enviado a API vai do primeiro ao ultimo
-// instante dele (senao o dia final fica de fora), resolvido no fuso de quem
-// esta na tela — o mesmo padrao usado no filtro de Movimentações.
-function instante(dia, hora) {
-  if (!dia) return undefined
-  const data = new Date(`${dia}T${hora}`)
-  return Number.isNaN(data.getTime()) ? undefined : data.toISOString()
 }
 
 function periodoPadrao() {
@@ -134,7 +126,7 @@ export function Relatorios() {
 
       {(resumo.isError || giro.isError) && (
         <p className="campo-erro text-body" role="alert">
-          {resumo.error?.mensagem ?? giro.error?.mensagem}
+          {mensagemDoErro(resumo.error ?? giro.error)}
         </p>
       )}
 
@@ -143,27 +135,21 @@ export function Relatorios() {
           tom="neutro"
           Icone={IconeMovimentacoes}
           rotulo="Total vendido"
-          valor={resumo.isPending ? '—' : MOEDA.format(resumo.data?.totalVendido ?? 0)}
+          valor={resumo.isSuccess ? MOEDA.format(resumo.data.totalVendido) : '—'}
           meta="Preço registrado em cada venda (histórico, RN09)"
         />
         <KpiCard
           tom="mint"
           Icone={IconeProdutos}
           rotulo="Unidades vendidas"
-          valor={resumo.isPending ? '—' : (resumo.data?.unidadesVendidas ?? 0)}
+          valor={resumo.isSuccess ? resumo.data.unidadesVendidas : '—'}
           meta="No período selecionado"
         />
         <KpiCard
           tom="alerta"
           Icone={IconeRelatorios}
           rotulo="Giro de estoque"
-          valor={
-            giro.isPending
-              ? '—'
-              : giro.data?.geral?.giro == null
-                ? '—'
-                : NUMERO.format(giro.data.geral.giro)
-          }
+          valor={giro.data?.geral?.giro == null ? '—' : NUMERO.format(giro.data.geral.giro)}
           meta={giro.data?.formula ?? 'unidades vendidas no período ÷ saldo médio do período'}
         />
       </section>
@@ -192,17 +178,12 @@ export function Relatorios() {
           </div>
         </div>
 
-        {ranking.isError && (
-          <p className="campo-erro text-body" role="alert">
-            {ranking.error.mensagem}
-          </p>
-        )}
-
         {categoriasRanking.length === 0 ? (
           <Tabela
             colunas={COLUNAS_RANKING_LISTA}
             dados={[]}
-            carregando={ranking.isPending}
+            carregando={ranking.isPending && ranking.fetchStatus !== 'idle'}
+            erro={ranking.error}
             vazio={
               <EstadoVazio
                 titulo="Nenhuma venda no período"
@@ -236,16 +217,11 @@ export function Relatorios() {
           </div>
         </div>
 
-        {distribuicao.isError && (
-          <p className="campo-erro text-body" role="alert">
-            {distribuicao.error.mensagem}
-          </p>
-        )}
-
         <Tabela
           colunas={COLUNAS_DISTRIBUICAO}
           dados={distribuicao.data?.categorias ?? []}
           carregando={distribuicao.isPending}
+          erro={distribuicao.error}
           vazio={
             <EstadoVazio
               titulo="Nenhuma categoria cadastrada"

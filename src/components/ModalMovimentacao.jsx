@@ -82,6 +82,7 @@ export function ModalMovimentacao({ aberto, aoFechar, tipo, produtoInicial = nul
     <Modal
       aberto={aberto}
       aoFechar={fechar}
+      bloquearFechamento={salvando}
       titulo={titulo}
       subtitulo={
         tipo === 'ENTRADA'

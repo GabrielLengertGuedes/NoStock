@@ -13,6 +13,13 @@ export class ErroApi extends Error {
   }
 }
 
+// Erro de validacao de filtro chega como "Dados inválidos." com o motivo de
+// verdade em campos (ex.: periodo invertido). Na tela, o motivo e mais util.
+export function mensagemDoErro(erro) {
+  const doCampo = erro?.campos ? Object.values(erro.campos)[0] : null
+  return doCampo ?? erro?.mensagem ?? 'Tente de novo em instantes.'
+}
+
 export const api = axios.create({
   baseURL: '/api',
   withCredentials: true,

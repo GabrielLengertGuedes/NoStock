@@ -23,7 +23,7 @@ function SemPermissao() {
 }
 
 export function RotaProtegida({ children, papel }) {
-  const { autenticado, carregando, loginExigido, temPapel } = useAuth()
+  const { autenticado, carregando, loginExigido, saiu, temPapel } = useAuth()
   const localizacao = useLocation()
 
   if (carregando) {
@@ -41,8 +41,10 @@ export function RotaProtegida({ children, papel }) {
     return children
   }
 
+  // Quem saiu pelo botao nao volta para a pagina em que estava: o proximo a
+  // entrar pode ser outra pessoa, com outro papel.
   if (!autenticado) {
-    return <Navigate to="/login" replace state={{ from: localizacao }} />
+    return <Navigate to="/login" replace state={saiu ? undefined : { from: localizacao }} />
   }
 
   if (papel && !temPapel(papel)) {

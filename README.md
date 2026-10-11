@@ -12,7 +12,7 @@ Projeto extensionista do curso de Engenharia de Software, Centro Universitário 
 Aplicação web para substituir o controle de estoque em planilhas e cadernos: cadastro de produtos, registro de entradas e saídas com responsável e horário, alerta de itens abaixo do mínimo, dashboard, relatórios e sugestão de compra por fornecedor.
 
 - **Front-end:** React + Vite (SPA)
-- **Back-end:** Node.js 20 + Express (API REST)
+- **Back-end:** Node.js 22 + Express (API REST)
 - **Banco:** PostgreSQL (Supabase)
 
 ---
@@ -26,7 +26,7 @@ nem Docker: o banco já existe, na nuvem, e é o mesmo para a equipe inteira.
 
 | O que | Como conferir | Onde pegar |
 |---|---|---|
-| **Node.js 20 ou superior** | `node -v` mostra `v20` ou maior | [nodejs.org](https://nodejs.org) — baixe a versão LTS |
+| **Node.js 22 ou superior** | `node -v` mostra `v22` ou maior | [nodejs.org](https://nodejs.org) — baixe a versão LTS |
 | **Git** | `git --version` responde | [git-scm.com](https://git-scm.com) |
 | **A `DATABASE_URL` do projeto** | — | No cofre da equipe. Peça a quem cuida da infraestrutura |
 
@@ -63,6 +63,10 @@ Abra o `.env` no editor e preencha as duas obrigatórias:
   Não precisa combinar com a de ninguém.
 
 As outras já vêm preenchidas com o valor certo para desenvolvimento. Não mexa nelas.
+
+> **Seu `.env` é antigo e tem `NODE_ENV=development`? Apague essa linha.** O Vite também lê o
+> `.env`, e com ela o `npm run build` sai com o React de desenvolvimento, bem maior e mais lento.
+> A API já assume desenvolvimento quando a variável não existe.
 
 ### 4. Suba o projeto
 
@@ -101,7 +105,7 @@ Enquanto você programa, rode só o que interessa:
 
 | Quando | Comando | Leva |
 |---|---|---|
-| Mexendo em regra pura, componente, schema | `npm run test:unit` | **~1 s** (39 testes, nem toca no banco) |
+| Mexendo em regra pura, componente, schema | `npm run test:unit` | **~1 s** (nem toca no banco) |
 | Mexendo em um módulo | `npx vitest run tests/integration/categorias.test.js` | **~13 s** |
 | Deixar rodando enquanto edita | `npm run test:watch` | Reexecuta sozinho ao salvar |
 | Antes de abrir a PR | `npm test` | 1–3 min |
@@ -123,7 +127,7 @@ banco entra como arquivo novo em `db/migrations/`, aplicado à mão e avisado no
 
 ## Quando algo dá errado
 
-### `node: command not found`, ou `node -v` mostra uma versão menor que 20
+### `node: command not found`, ou `node -v` mostra uma versão menor que 22
 
 O Node não está instalado, ou está desatualizado. Instale a versão LTS pelo
 [nodejs.org](https://nodejs.org), **feche e abra o terminal** e confira de novo com `node -v`.
@@ -160,12 +164,6 @@ Se ainda assim não conecta, teste a sua internet e confirme no grupo se o banco
 
 Já tem uma cópia do projeto rodando em outro terminal. Feche-a com `Ctrl+C`. Se não achar,
 feche todos os terminais e comece de novo.
-
-### O painel `api` mostra `Cannot find module ... server/index.js`
-
-A API ainda não foi escrita — está numa tarefa em aberto. O site sobe normalmente e você pode
-trabalhar no front. Assim que o arquivo existir, a API inicia sozinha, sem precisar reiniciar
-o `npm run dev`.
 
 ### `pg_dump não encontrado` no `npm run backup`
 

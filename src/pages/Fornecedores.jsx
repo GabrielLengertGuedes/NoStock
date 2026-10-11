@@ -5,6 +5,7 @@ import {
   useCriarFornecedor,
   useFornecedores,
   useInativarFornecedor,
+  useReativarFornecedor,
 } from '../api/fornecedores.js'
 import { Campo } from '../components/Campo.jsx'
 import { CampoComMascara } from '../components/CampoComMascara.jsx'
@@ -12,12 +13,14 @@ import { EstadoVazio } from '../components/EstadoVazio.jsx'
 import { IconeAlerta, IconeFornecedores, IconeProdutos } from '../components/IconesBioma.jsx'
 import { KpiCard } from '../components/KpiCard.jsx'
 import { Layout } from '../components/Layout.jsx'
+import { ListaDeInativos } from '../components/ListaDeInativos.jsx'
 import { MenuAcoes } from '../components/MenuAcoes.jsx'
 import { Modal } from '../components/Modal.jsx'
 import { ProdutoThumb } from '../components/ProdutoThumb.jsx'
 import { TelefoneFornecedor } from '../components/TelefoneFornecedor.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
+import { useToast } from '../hooks/useToast.js'
 import { CARACTERE_CNPJ, mascararCnpj } from '../lib/cnpj.js'
 import { CARACTERE_TELEFONE, formatarTelefone, mascararTelefone } from '../lib/telefone.js'
 
@@ -27,10 +30,13 @@ export function Fornecedores() {
   const { temPapel } = useAuth()
   const podeEditar = temPapel('GESTOR')
   const menu = useMenuPrincipal()
-  const consulta = useFornecedores()
+  // So o gestor ve os inativos: e ele quem pode reativar.
+  const consulta = useFornecedores({ incluirInativos: podeEditar })
   const criar = useCriarFornecedor()
   const atualizar = useAtualizarFornecedor()
   const inativar = useInativarFornecedor()
+  const reativar = useReativarFornecedor()
+  const toast = useToast()
 
   const [emEdicao, setEmEdicao] = useState(null)
   const [aInativar, setAInativar] = useState(null)
@@ -75,11 +81,27 @@ export function Fornecedores() {
     acao.then(() => setEmEdicao(null)).catch(() => {})
   }
 
+  function abrirInativacao(fornecedor) {
+    // Sem o reset, o erro da ultima tentativa aparecia no modal da proxima.
+    inativar.reset()
+    setAInativar(fornecedor)
+  }
+
   function confirmarInativacao() {
     inativar.mutateAsync(aInativar.id).then(() => setAInativar(null)).catch(() => {})
   }
 
-  const lista = consulta.data ?? []
+  function reativarFornecedor(fornecedor) {
+    reativar
+      .mutateAsync(fornecedor.id)
+      .then(() => toast.mostrar({ titulo: 'Fornecedor reativado', mensagem: fornecedor.nome }))
+      .catch((erro) =>
+        toast.mostrar({ tipo: 'erro', titulo: 'Não foi possível reativar', mensagem: erro.mensagem }),
+      )
+  }
+
+  const lista = (consulta.data ?? []).filter((fornecedor) => fornecedor.ativo)
+  const inativos = (consulta.data ?? []).filter((fornecedor) => !fornecedor.ativo)
 
   return (
     <Layout
@@ -118,16 +140,14 @@ export function Fornecedores() {
         />
       </section>
 
-      {consulta.isError && (
-        <p className="campo-erro text-body" role="alert">
-          {consulta.error.mensagem}
-        </p>
-      )}
-
       {consulta.isPending ? (
         <p className="text-body" style={{ color: 'var(--gray)' }}>
           Carregando fornecedores…
         </p>
+      ) : consulta.isError ? (
+        <div role="alert">
+          <EstadoVazio titulo="Não foi possível carregar os fornecedores" descricao={consulta.error.mensagem} />
+        </div>
       ) : lista.length === 0 ? (
         <EstadoVazio
           titulo="Nenhum fornecedor cadastrado"
@@ -151,7 +171,7 @@ export function Fornecedores() {
                     rotulo={`Ações de ${fornecedor.nome}`}
                     itens={[
                       { rotulo: 'Editar', onClick: () => abrirFormulario(fornecedor) },
-                      { rotulo: 'Inativar', onClick: () => setAInativar(fornecedor), perigo: true },
+                      { rotulo: 'Inativar', onClick: () => abrirInativacao(fornecedor), perigo: true },
                     ]}
                   />
                 ) : null}
@@ -183,6 +203,14 @@ export function Fornecedores() {
           ))}
         </section>
       )}
+
+      <ListaDeInativos
+        titulo="Fornecedores inativos"
+        descricao="Fora das listagens e dos cadastros de produto. Reative para voltar a usar."
+        itens={inativos}
+        aoReativar={reativarFornecedor}
+        reativando={reativar.isPending}
+      />
 
       <Modal
         aberto={emEdicao !== null}

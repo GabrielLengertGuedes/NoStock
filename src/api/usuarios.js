@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 import { api } from './client.js'
 
@@ -11,40 +11,28 @@ export function useUsuarios(ativo = 'true') {
   })
 }
 
-function useAoConcluir() {
-  const cliente = useQueryClient()
-  return () => cliente.invalidateQueries({ queryKey: CHAVE })
-}
-
+// Invalidacao do cache depois de cada escrita: ver queryClient.js.
 export function useCriarUsuario() {
-  const aoConcluir = useAoConcluir()
   return useMutation({
     mutationFn: async (dados) => (await api.post('/usuarios', dados)).dados,
-    onSuccess: aoConcluir,
   })
 }
 
 export function useAtualizarUsuario() {
-  const aoConcluir = useAoConcluir()
   return useMutation({
     mutationFn: async ({ id, ...dados }) => (await api.put(`/usuarios/${id}`, dados)).dados,
-    onSuccess: aoConcluir,
   })
 }
 
 export function useInativarUsuario() {
-  const aoConcluir = useAoConcluir()
   return useMutation({
     mutationFn: (id) => api.delete(`/usuarios/${id}`),
-    onSuccess: aoConcluir,
   })
 }
 
 export function useReativarUsuario() {
-  const aoConcluir = useAoConcluir()
   return useMutation({
     mutationFn: (id) => api.post(`/usuarios/${id}/reativar`),
-    onSuccess: aoConcluir,
   })
 }
 
