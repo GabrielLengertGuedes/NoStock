@@ -683,7 +683,7 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
 
   it('recusa categoria ou fornecedor inexistente ou inativo com 422 no campo', async () => {
     const cliente = await logar()
-    const base = { nome: 'Produto Vinculo', precoVenda: 10 }
+    const base = { nome: 'Produto Vinculo', precoVenda: 10, estoqueInicial: 0, estoqueMinimo: 0 }
 
     const semCategoria = await criarViaApi(cliente, { ...base, categoriaId: 99999999 })
     expect(semCategoria.status).toBe(422)
@@ -723,6 +723,8 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
       nome: 'Produto Caro Demais',
       categoriaId: categoriaRacao,
       precoVenda: 1e12,
+      estoqueInicial: 0,
+      estoqueMinimo: 0,
     })
     expect(resposta.status).toBe(422)
     expect(resposta.body.erro.codigo).toBe('VALIDACAO')
