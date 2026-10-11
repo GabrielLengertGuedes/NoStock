@@ -133,6 +133,27 @@ describe.skipIf(!temBanco())('/api/auth', () => {
     expect(aindaLivre.status).toBe(401)
   })
 
+  it('bloqueio de um e-mail nao trava o IP: clicar em Entrar bloqueado nao conta', async () => {
+    for (let i = 0; i < 5; i += 1) {
+      await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'teste.f102.spam@exemplo.com', senha: 'errada' })
+    }
+    // 40 cliques ja bloqueado: sao 429, nao credencial errada
+    for (let i = 0; i < 40; i += 1) {
+      const bloqueado = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'teste.f102.spam@exemplo.com', senha: 'errada' })
+      expect(bloqueado.status).toBe(429)
+    }
+
+    const colega = await request(app).post('/api/auth/login').send({
+      email: 'teste.f102.op@exemplo.com',
+      senha: SENHA,
+    })
+    expect(colega.status).toBe(200)
+  })
+
   it('corpo sem email nao bloqueia outros logins', async () => {
     for (let i = 0; i < 6; i += 1) {
       const invalido = await request(app).post('/api/auth/login').send({ senha: SENHA })

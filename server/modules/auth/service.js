@@ -7,9 +7,20 @@ import {
   buscarCredenciaisPorId,
   buscarPorEmailPeloLogin,
   buscarPorId,
+  encerrarSessoes,
 } from '../usuarios/repository.js'
 
 const MENSAGEM_LOGIN_INVALIDO = 'E-mail ou senha inválidos'
+
+// E-mail inexistente tambem paga um bcrypt: sem isso ele respondia na hora e
+// o tempo de resposta dizia quais e-mails tem conta. Gerado uma vez, no custo
+// configurado, para levar o mesmo tempo de uma senha de verdade.
+let hashFicticio = null
+
+async function compararComHashFicticio(senha) {
+  hashFicticio ??= await bcrypt.hash('nostock-usuario-inexistente', obterEnv().bcryptRounds)
+  await bcrypt.compare(senha, hashFicticio)
+}
 
 function usuarioPublico(usuario) {
   return {
@@ -24,6 +35,7 @@ export async function login(email, senha) {
   const usuario = await buscarPorEmailPeloLogin(email)
 
   if (!usuario) {
+    await compararComHashFicticio(senha)
     throw new AppError('NAO_AUTENTICADO', MENSAGEM_LOGIN_INVALIDO)
   }
 
@@ -45,7 +57,9 @@ export async function me(id) {
   return usuarioPublico(usuario)
 }
 
-export async function alterarSenha(id, senhaAtual, senhaNova) {
+// Quem troca a senha derruba as outras sessoes abertas (o PC do balcao que
+// ficou logado, por exemplo) e continua na atual.
+export async function alterarSenha(id, senhaAtual, senhaNova, { sessaoAtual = null } = {}) {
   const usuario = await buscarCredenciaisPorId(id)
 
   if (!usuario || !usuario.ativo) {
@@ -58,4 +72,5 @@ export async function alterarSenha(id, senhaAtual, senhaNova) {
   }
 
   await atualizarSenha(id, await bcrypt.hash(senhaNova, obterEnv().bcryptRounds))
+  await encerrarSessoes(id, { exceto: sessaoAtual })
 }

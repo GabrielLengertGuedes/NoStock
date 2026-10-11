@@ -17,7 +17,9 @@ export async function atualizar(req, res) {
 }
 
 export async function redefinirSenha(req, res) {
-  await servico.redefinirSenha(req.validado.params.id, req.validado.body.senhaNova)
+  await servico.redefinirSenha(req.validado.params.id, req.validado.body.senhaNova, {
+    sessaoAtual: req.sessionID,
+  })
   res.status(204).end()
 }
 
