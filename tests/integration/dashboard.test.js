@@ -98,6 +98,8 @@ describe.skipIf(!temBanco())('GET /api/dashboard', () => {
       estoqueBaixo: 2,
       entradasHoje: 1,
       saidasHoje: 1,
+      // falta ate o minimo x R$ 10: Baixo 3 + Critico 7 + Sem estoque 5
+      valorEmRisco: 150,
     })
     expect(typeof resposta.body.dados.atualizadoEm).toBe('string')
     expect(Number.isNaN(Date.parse(resposta.body.dados.atualizadoEm))).toBe(false)

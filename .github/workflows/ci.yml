@@ -30,15 +30,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 20.x
+      # Mesma versao da imagem de producao (Dockerfile: node:22-slim).
+      - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '22.x'
           cache: 'npm'
+      # ci, e nao install: instala exatamente o package-lock e falha se ele
+      # estiver fora de sincronia com o package.json.
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       - name: Run lint
         run: npm run lint --if-present
+      # O Dockerfile roda o mesmo build: quebrar aqui e quebrar o deploy.
+      - name: Build do front
+        run: npm run build
 
       # Reconstrói o banco na mesma ordem em que o Supabase foi construído:
       # schema.sql (que nunca é editado) e depois cada migração, em ordem.

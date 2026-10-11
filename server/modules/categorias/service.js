@@ -57,3 +57,13 @@ export async function inativar(id) {
 
   throw new AppError('REGRA_NEGOCIO', 'Essa categoria já está inativa.')
 }
+
+export async function reativar(id) {
+  const categoria = await repositorio.reativar(id)
+  if (categoria) return
+
+  const existente = await repositorio.buscarPorId(id)
+  if (!existente) throw naoEncontrada()
+
+  throw new AppError('REGRA_NEGOCIO', 'Essa categoria já está ativa.')
+}

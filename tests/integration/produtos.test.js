@@ -614,4 +614,135 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
     expect(resposta.status).toBe(409)
     expect(resposta.body.erro.codigo).toBe('NOME_DUPLICADO')
   })
+  it('busca um produto pelo id, inclusive inativo, e responde 404 para inexistente', async () => {
+    const cliente = await logar()
+    const id = idPorNome['Shampoo Neutro Pet']
+
+    const resposta = await cliente.get(`/api/produtos/${id}`)
+    expect(resposta.status).toBe(200)
+    expect(resposta.body.dados).toMatchObject({
+      id,
+      nome: 'Shampoo Neutro Pet',
+      statusEstoque: 'CRITICO',
+      ultimaReposicao: null,
+    })
+
+    await obterPool().query('update public.produtos set ativo = false where id = $1', [id])
+    expect((await cliente.get(`/api/produtos/${id}`)).body.dados.ativo).toBe(false)
+
+    expect((await cliente.get('/api/produtos/99999999')).status).toBe(404)
+  })
+
+  it('ultimaReposicao e a data da ultima COMPRA, sem contar devolucao', async () => {
+    const cliente = await logar()
+    const id = idPorNome['Ração Filhote Sabor Frango']
+
+    const compra = await cliente
+      .post('/api/movimentacoes')
+      .send({ produtoId: id, tipo: 'ENTRADA', motivo: 'COMPRA', quantidade: 5 })
+    expect(compra.status).toBe(201)
+    await cliente
+      .post('/api/movimentacoes')
+      .send({ produtoId: id, tipo: 'ENTRADA', motivo: 'DEVOLUCAO', quantidade: 1 })
+
+    const resposta = await cliente.get(`/api/produtos/${id}`)
+    expect(resposta.body.dados.ultimaReposicao).toBe(compra.body.dados.criadoEm)
+  })
+
+  it('resume o catalogo ativo: total, quantos precisam repor e valor do inventario', async () => {
+    const cliente = await logar()
+    await obterPool().query(
+      `update public.produtos set ativo = false where nome like '%' and id not in (select unnest($1::int[]))`,
+      [Object.values(idPorNome)],
+    )
+
+    const resposta = await cliente.get('/api/produtos/resumo')
+    expect(resposta.status).toBe(200)
+    expect(resposta.body.dados).toEqual({
+      totalProdutos: 5,
+      precisamRepor: 3, // baixo, critico e sem estoque
+      valorInventario: (20 + 7 + 0 + 3 + 50) * 10,
+    })
+  })
+
+  it('pagina sem repetir nem pular produtos quando a ordenacao empata', async () => {
+    for (const nome of ['Empate A', 'Empate B', 'Empate C', 'Empate D']) {
+      await criarProduto({ nome, categoriaId: categoriaRacao, fornecedorId: null, quantidadeAtual: 0, estoqueMinimo: 0 })
+    }
+
+    const total = (await listar('?porPagina=1')).body.meta.total
+    const vistos = []
+    for (let pagina = 1; pagina <= Math.ceil(total / 2); pagina += 1) {
+      const resposta = await listar(`?ordenarPor=quantidade&porPagina=2&pagina=${pagina}`)
+      vistos.push(...resposta.body.dados.map((p) => p.id))
+    }
+
+    expect(vistos).toHaveLength(total)
+    expect(new Set(vistos).size).toBe(total)
+  })
+
+  it('recusa categoria ou fornecedor inexistente ou inativo com 422 no campo', async () => {
+    const cliente = await logar()
+    const base = { nome: 'Produto Vinculo', precoVenda: 10, estoqueInicial: 0, estoqueMinimo: 0 }
+
+    const semCategoria = await criarViaApi(cliente, { ...base, categoriaId: 99999999 })
+    expect(semCategoria.status).toBe(422)
+    expect(semCategoria.body.erro.campos.categoriaId).toBe('Categoria não encontrada')
+
+    await obterPool().query('update public.fornecedores set ativo = false where id = $1', [fornecedorX])
+    const fornecedorInativo = await criarViaApi(cliente, {
+      ...base,
+      categoriaId: categoriaRacao,
+      fornecedorId: fornecedorX,
+    })
+    expect(fornecedorInativo.status).toBe(422)
+    expect(fornecedorInativo.body.erro.campos.fornecedorId).toMatch(/inativo/)
+  })
+
+  it('nao reativa produto enquanto a categoria dele estiver inativa', async () => {
+    const gestor = await logar('GESTOR')
+    const id = idPorNome['Brinquedo Corda Resistente']
+
+    await gestor.delete(`/api/produtos/${id}`)
+    await obterPool().query(
+      'update public.produtos set ativo = false where categoria_id = $1',
+      [categoriaHigiene],
+    )
+    await obterPool().query('update public.categorias set ativo = false where id = $1', [categoriaHigiene])
+
+    const resposta = await gestor.post(`/api/produtos/${id}/reativar`)
+    expect(resposta.status).toBe(400)
+    expect(resposta.body.erro.codigo).toBe('REGRA_NEGOCIO')
+    expect(resposta.body.erro.mensagem).toMatch(/Higiene Teste/)
+  })
+
+  it('responde 422, e nao 500, para preco que nao cabe na coluna', async () => {
+    const cliente = await logar()
+
+    const resposta = await criarViaApi(cliente, {
+      nome: 'Produto Caro Demais',
+      categoriaId: categoriaRacao,
+      precoVenda: 1e12,
+      estoqueInicial: 0,
+      estoqueMinimo: 0,
+    })
+    expect(resposta.status).toBe(422)
+    expect(resposta.body.erro.codigo).toBe('VALIDACAO')
+  })
+  it('troca so o fornecedor sem exigir que a categoria atual esteja ativa', async () => {
+    const gestor = await logar('GESTOR')
+    const id = idPorNome['Brinquedo Corda Resistente']
+    await obterPool().query('update public.produtos set ativo = false where categoria_id = $1', [categoriaHigiene])
+    await obterPool().query('update public.categorias set ativo = false where id = $1', [categoriaHigiene])
+
+    const resposta = await gestor.put(`/api/produtos/${id}`).send({
+      nome: 'Brinquedo Corda Resistente',
+      categoriaId: categoriaHigiene,
+      fornecedorId: fornecedorX,
+      precoVenda: 10,
+      estoqueMinimo: 0,
+    })
+    expect(resposta.status).toBe(200)
+    expect(resposta.body.dados.fornecedor.id).toBe(fornecedorX)
+  })
 })

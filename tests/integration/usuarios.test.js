@@ -213,4 +213,80 @@ describe.skipIf(!temBanco())('/api/usuarios', () => {
     const deNovo = await cliente.get(`/api/usuarios/${id}`)
     expect(deNovo.body.dados.ativo).toBe(true)
   })
+  it('usuario inativado perde o acesso na hora, mesmo com a sessao aberta', async () => {
+    const gestor = await entrar(app)
+    const operador = await entrar(app, OPERADOR)
+    expect((await operador.get('/api/produtos')).status).toBe(200)
+
+    const { rows } = await obterPool().query('select id from usuarios where email = $1', [OPERADOR])
+    expect((await gestor.delete(`/api/usuarios/${rows[0].id}`)).status).toBe(204)
+
+    const depois = await operador.get('/api/produtos')
+    expect(depois.status).toBe(401)
+    expect(depois.body.erro.codigo).toBe('NAO_AUTENTICADO')
+  })
+
+  it('gestor rebaixado perde a area de gestor sem precisar sair', async () => {
+    await obterPool().query(
+      `insert into usuarios (nome, email, senha_hash, papel) values ('Outro Gestor', $1, $2, 'GESTOR')`,
+      ['teste.f103.gestor2@exemplo.com', hashSenha],
+    )
+    const rebaixado = await entrar(app, 'teste.f103.gestor2@exemplo.com')
+    expect((await rebaixado.get('/api/usuarios')).status).toBe(200)
+
+    const gestor = await entrar(app)
+    const { rows } = await obterPool().query('select id from usuarios where email = $1', [
+      'teste.f103.gestor2@exemplo.com',
+    ])
+    const rebaixamento = await gestor.put(`/api/usuarios/${rows[0].id}`).send({
+      nome: 'Outro Gestor',
+      email: 'teste.f103.gestor2@exemplo.com',
+      papel: 'OPERADOR',
+    })
+    expect(rebaixamento.status).toBe(200)
+
+    const depois = await rebaixado.get('/api/usuarios')
+    expect(depois.status).toBe(403)
+    expect(depois.body.erro.codigo).toBe('SEM_PERMISSAO')
+  })
+
+  it('senha redefinida pelo gestor derruba as sessoes abertas do usuario', async () => {
+    const gestor = await entrar(app)
+    const operador = await entrar(app, OPERADOR)
+
+    const { rows } = await obterPool().query('select id from usuarios where email = $1', [OPERADOR])
+    const redefinicao = await gestor
+      .patch(`/api/usuarios/${rows[0].id}/senha`)
+      .send({ senhaNova: 'novaSenha99' })
+    expect(redefinicao.status).toBe(204)
+
+    expect((await operador.get('/api/auth/me')).status).toBe(401)
+    expect((await gestor.get('/api/auth/me')).status).toBe(200)
+  })
+
+  it('troca da propria senha derruba as outras sessoes e mantem a atual', async () => {
+    const balcao = await entrar(app, OPERADOR)
+    const celular = await entrar(app, OPERADOR)
+
+    const troca = await celular
+      .patch('/api/auth/senha')
+      .send({ senhaAtual: SENHA, senhaNova: 'novaSenha99' })
+    expect(troca.status).toBe(204)
+
+    expect((await balcao.get('/api/auth/me')).status).toBe(401)
+    expect((await celular.get('/api/auth/me')).status).toBe(200)
+  })
+
+  it('recusa senha acima de 72 bytes, que o bcrypt cortaria', async () => {
+    const cliente = await entrar(app)
+    const resposta = await cliente.post('/api/usuarios').send({
+      nome: 'Senha Longa',
+      email: 'teste.f103.longa@exemplo.com',
+      senha: 'a'.repeat(73),
+      papel: 'OPERADOR',
+    })
+
+    expect(resposta.status).toBe(422)
+    expect(resposta.body.erro.campos.senha).toMatch(/72/)
+  })
 })

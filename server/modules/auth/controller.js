@@ -19,8 +19,8 @@ export async function login(req, res, next) {
     const usuario = await servico.login(email, senha)
 
     await renovarSessao(req)
+    // So o id: papel e situacao sao relidos do banco a cada request (requireAuth).
     req.session.usuarioId = usuario.id
-    req.session.papel = usuario.papel
     await gravarSessao(req)
 
     res.status(200).json({ dados: usuario })
@@ -39,7 +39,7 @@ export function logout(req, res, next) {
 
 export async function me(req, res, next) {
   try {
-    const usuario = await servico.me(req.session.usuarioId)
+    const usuario = await servico.me(req.usuario.id)
     res.status(200).json({ dados: usuario })
   } catch (erro) {
     next(erro)
@@ -49,7 +49,9 @@ export async function me(req, res, next) {
 export async function alterarSenha(req, res, next) {
   try {
     const { senhaAtual, senhaNova } = req.validado.body
-    await servico.alterarSenha(req.session.usuarioId, senhaAtual, senhaNova)
+    await servico.alterarSenha(req.usuario.id, senhaAtual, senhaNova, {
+      sessaoAtual: req.sessionID,
+    })
     res.status(204).end()
   } catch (erro) {
     next(erro)

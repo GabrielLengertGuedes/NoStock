@@ -1,15 +1,27 @@
+import { readFileSync } from 'node:fs'
+
 import pg from 'pg'
 import { obterEnv } from '../config/env.js'
 
 let pool = null
 
-// O Supabase usa cadeia propria: cifra a conexao, mas nao valida o certificado.
+// O painel guarda variavel numa linha so: o PEM pode vir com "\n" literal.
+function lerCertificado(valor) {
+  if (valor.startsWith('-----BEGIN')) return valor.replace(/\\n/g, '\n')
+  return readFileSync(valor, 'utf8')
+}
+
 // Um Postgres local — o contêiner do CI, por exemplo — nao oferece TLS, e exigir
 // SSL contra ele derruba a conexao. Decidir pela propria URL evita mais uma
 // variavel de ambiente para alguem esquecer de configurar.
-export function sslDoBanco(url) {
+// O Supabase assina com CA propria. Com DATABASE_CA_CERT a conexao valida o
+// certificado (protege contra quem se ponha no meio do caminho); sem ela, so
+// cifra — e a API avisa no log de producao.
+export function sslDoBanco(url, certificadoCa = null) {
   const local = /@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(url) || /sslmode=disable/.test(url)
-  return local ? false : { rejectUnauthorized: false }
+  if (local) return false
+  if (certificadoCa) return { ca: lerCertificado(certificadoCa), rejectUnauthorized: true }
+  return { rejectUnauthorized: false }
 }
 
 export function obterPool() {
@@ -19,7 +31,7 @@ export function obterPool() {
 
   pool = new pg.Pool({
     connectionString: env.databaseUrl,
-    ssl: sslDoBanco(env.databaseUrl),
+    ssl: sslDoBanco(env.databaseUrl, env.databaseCaCert),
     max: 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,

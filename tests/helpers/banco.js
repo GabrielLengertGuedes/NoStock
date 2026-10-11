@@ -35,8 +35,8 @@ function encaminhar(texto, valores) {
 export async function abrirTransacao() {
   await desfazerTransacao()
 
-  const url = obterEnv().databaseUrl
-  cliente = new pg.Client({ connectionString: url, ssl: sslDoBanco(url) })
+  const { databaseUrl: url, databaseCaCert } = obterEnv()
+  cliente = new pg.Client({ connectionString: url, ssl: sslDoBanco(url, databaseCaCert) })
 
   await cliente.connect()
   await cliente.query('begin')

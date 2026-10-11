@@ -1,5 +1,6 @@
 import { obterPool } from '../../db/pool.js'
 import { statusEstoqueSql } from '../../shared/statusEstoque.js'
+import { ULTIMA_REPOSICAO_SQL } from '../produtos/repository.js'
 
 const STATUS_SQL = statusEstoqueSql('p.quantidade_atual', 'p.estoque_minimo')
 
@@ -19,7 +20,11 @@ export async function obterCards({ inicioDoDia, fimDoDia }, conexao = obterPool(
     conexao.query(`
       select count(*)::int as "totalProdutos",
              count(*) filter (where (${STATUS_SQL}) = 'SEM_ESTOQUE')::int as "semEstoque",
-             count(*) filter (where (${STATUS_SQL}) in ('BAIXO', 'CRITICO'))::int as "estoqueBaixo"
+             count(*) filter (where (${STATUS_SQL}) in ('BAIXO', 'CRITICO'))::int as "estoqueBaixo",
+             -- Quanto falta, em preco de venda, para todo produto voltar ao minimo.
+             -- Somado aqui porque a lista de atencao para nos 10 primeiros.
+             coalesce(sum(greatest(p.estoque_minimo - p.quantidade_atual, 0) * p.preco_venda), 0)::float8
+               as "valorEmRisco"
         from public.produtos p
        where p.ativo
     `),
@@ -45,14 +50,16 @@ export async function obterProdutosAtencao(conexao = obterPool()) {
            p.quantidade_atual as "quantidadeAtual",
            p.estoque_minimo as "estoqueMinimo",
            p.preco_venda::float8 as "precoVenda",
-           (${STATUS_SQL}) as "statusEstoque"
+           (${STATUS_SQL}) as "statusEstoque",
+           ${ULTIMA_REPOSICAO_SQL} as "ultimaReposicao"
       from public.produtos p
       join public.categorias c on c.id = p.categoria_id
      where p.ativo
        and (${STATUS_SQL}) in ('BAIXO', 'CRITICO', 'SEM_ESTOQUE')
      order by ${PRIORIDADE_SQL},
               (p.estoque_minimo - p.quantidade_atual) desc,
-              p.nome asc
+              p.nome asc,
+              p.id
      limit 10
   `)
 

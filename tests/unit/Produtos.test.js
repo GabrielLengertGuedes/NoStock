@@ -33,8 +33,16 @@ vi.mock('../../src/api/produtos.js', () => ({
   }),
   useCriarProduto: () => ({ isPending: false, error: null, reset: () => {}, mutateAsync: vi.fn() }),
   useAtualizarProduto: () => ({ isPending: false, error: null, reset: () => {}, mutateAsync: vi.fn() }),
-  useInativarProduto: () => ({ isPending: false, error: null, mutateAsync: vi.fn() }),
-  useValorInventario: () => ({ data: { valor: 171.6, total: 1, completo: true }, isPending: false }),
+  useInativarProduto: () => ({ isPending: false, error: null, reset: () => {}, mutateAsync: vi.fn() }),
+  useReativarProduto: () => ({ isPending: false, error: null, mutateAsync: vi.fn() }),
+  useResumoProdutos: () => ({
+    data: { totalProdutos: 1, precisamRepor: 1, valorInventario: 171.6 },
+    isPending: false,
+  }),
+}))
+
+vi.mock('../../src/hooks/useToast.js', () => ({
+  useToast: () => ({ mostrar: vi.fn(), fechar: vi.fn() }),
 }))
 
 vi.mock('../../src/api/categorias.js', () => ({
@@ -73,6 +81,9 @@ describe('Produtos', () => {
     expect(html).toContain('Ração Premium')
     expect(html).toContain('BIO-RACA-0001')
     expect(html).toContain('Valor de inventário')
+    // valor somado no servidor (GET /produtos/resumo), nao mais no navegador
+    expect(html).toMatch(/R\$\s171,60/)
+    expect(html).toContain('Situação')
     expect(html).toContain('Registrar entrada')
     expect(html).toContain('Registrar saída')
     expect(html).toContain('Editar')
@@ -102,5 +113,7 @@ describe('Produtos', () => {
     expect(tbody).toContain('Registrar saída')
     expect(tbody).toContain('Editar')
     expect(tbody).not.toContain('Excluir')
+    // ver e reativar excluidos e coisa de gestor
+    expect(html).not.toContain('Situação')
   })
 })

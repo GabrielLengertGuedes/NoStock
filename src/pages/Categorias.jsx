@@ -5,17 +5,20 @@ import {
   useCategorias,
   useCriarCategoria,
   useInativarCategoria,
+  useReativarCategoria,
 } from '../api/categorias.js'
 import { Campo } from '../components/Campo.jsx'
 import { EstadoVazio } from '../components/EstadoVazio.jsx'
 import { IconeCategorias, IconeProdutos } from '../components/IconesBioma.jsx'
 import { KpiCard } from '../components/KpiCard.jsx'
 import { Layout } from '../components/Layout.jsx'
+import { ListaDeInativos } from '../components/ListaDeInativos.jsx'
 import { MenuAcoes } from '../components/MenuAcoes.jsx'
 import { Modal } from '../components/Modal.jsx'
 import { ProdutoThumb } from '../components/ProdutoThumb.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
+import { useToast } from '../hooks/useToast.js'
 
 const VAZIA = { nome: '', descricao: '' }
 
@@ -23,10 +26,13 @@ export function Categorias() {
   const { temPapel } = useAuth()
   const podeEditar = temPapel('GESTOR')
   const menu = useMenuPrincipal()
-  const consulta = useCategorias()
+  // So o gestor ve as inativas: e ele quem pode reativar.
+  const consulta = useCategorias({ incluirInativas: podeEditar })
   const criar = useCriarCategoria()
   const atualizar = useAtualizarCategoria()
   const inativar = useInativarCategoria()
+  const reativar = useReativarCategoria()
+  const toast = useToast()
 
   const [emEdicao, setEmEdicao] = useState(null)
   const [aInativar, setAInativar] = useState(null)
@@ -53,11 +59,27 @@ export function Categorias() {
     acao.then(() => setEmEdicao(null)).catch(() => {})
   }
 
+  function abrirInativacao(categoria) {
+    // Sem o reset, o erro da ultima tentativa aparecia no modal da proxima.
+    inativar.reset()
+    setAInativar(categoria)
+  }
+
   function confirmarInativacao() {
     inativar.mutateAsync(aInativar.id).then(() => setAInativar(null)).catch(() => {})
   }
 
-  const lista = consulta.data ?? []
+  function reativarCategoria(categoria) {
+    reativar
+      .mutateAsync(categoria.id)
+      .then(() => toast.mostrar({ titulo: 'Categoria reativada', mensagem: categoria.nome }))
+      .catch((erro) =>
+        toast.mostrar({ tipo: 'erro', titulo: 'Não foi possível reativar', mensagem: erro.mensagem }),
+      )
+  }
+
+  const lista = (consulta.data ?? []).filter((categoria) => categoria.ativo)
+  const inativas = (consulta.data ?? []).filter((categoria) => !categoria.ativo)
   const totalUnidades = lista.reduce((acc, c) => acc + (c.unidadesEmEstoque ?? 0), 0)
 
   return (
@@ -97,16 +119,14 @@ export function Categorias() {
         />
       </section>
 
-      {consulta.isError && (
-        <p className="campo-erro text-body" role="alert">
-          {consulta.error.mensagem}
-        </p>
-      )}
-
       {consulta.isPending ? (
         <p className="text-body" style={{ color: 'var(--gray)' }}>
           Carregando categorias…
         </p>
+      ) : consulta.isError ? (
+        <div role="alert">
+          <EstadoVazio titulo="Não foi possível carregar as categorias" descricao={consulta.error.mensagem} />
+        </div>
       ) : lista.length === 0 ? (
         <EstadoVazio
           titulo="Nenhuma categoria cadastrada"
@@ -130,7 +150,7 @@ export function Categorias() {
                     rotulo={`Ações de ${categoria.nome}`}
                     itens={[
                       { rotulo: 'Editar', onClick: () => abrirFormulario(categoria) },
-                      { rotulo: 'Inativar', onClick: () => setAInativar(categoria), perigo: true },
+                      { rotulo: 'Inativar', onClick: () => abrirInativacao(categoria), perigo: true },
                     ]}
                   />
                 ) : null}
@@ -158,6 +178,14 @@ export function Categorias() {
           ))}
         </section>
       )}
+
+      <ListaDeInativos
+        titulo="Categorias inativas"
+        descricao="Fora das listagens e dos cadastros de produto. Reative para voltar a usar."
+        itens={inativas}
+        aoReativar={reativarCategoria}
+        reativando={reativar.isPending}
+      />
 
       <Modal
         aberto={emEdicao !== null}

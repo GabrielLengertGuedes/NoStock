@@ -20,3 +20,4 @@ rotas.post('/', ...soGestor, validate({ body: corpoDeCriacao }), controlador.cri
 rotas.get('/:id', ...autenticado, validate({ params: parametroId }), controlador.buscarPorId)
 rotas.put('/:id', ...soGestor, validate({ params: parametroId, body: corpoDeAtualizacao }), controlador.atualizar)
 rotas.delete('/:id', ...soGestor, validate({ params: parametroId }), controlador.inativar)
+rotas.post('/:id/reativar', ...soGestor, validate({ params: parametroId }), controlador.reativar)

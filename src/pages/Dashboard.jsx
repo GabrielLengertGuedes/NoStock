@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 
 import { useDashboard } from '../api/dashboard.js'
-import { useMovimentacoes } from '../api/movimentacoes.js'
 import { useProdutos } from '../api/produtos.js'
 import { BadgeStatus } from '../components/BadgeStatus.jsx'
 import { EstadoVazio } from '../components/EstadoVazio.jsx'
@@ -16,9 +15,9 @@ import { ProdutoThumb } from '../components/ProdutoThumb.jsx'
 import { Tabela } from '../components/Tabela.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
+import { MOEDA } from '../lib/formatos.js'
 import { skuDoProduto } from '../lib/sku.js'
 
-const MOEDA = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const DATA_CURTA = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' })
 
 function formatarReposicao(iso) {
@@ -37,11 +36,6 @@ export function Dashboard() {
   // "hoje" e prioridade dos produtos são responsabilidade do backend (F3-01).
   const dashboard = useDashboard()
   const resumo = useProdutos({ pagina: 1, porPagina: 10 })
-  const entradasRecentes = useMovimentacoes({
-    tipo: 'ENTRADA',
-    pagina: 1,
-    porPagina: 100,
-  })
 
   const cards = dashboard.data?.cards
   const produtosAtencao = dashboard.data?.produtosAtencao ?? []
@@ -50,32 +44,21 @@ export function Dashboard() {
 
   const totalProdutos = cards?.totalProdutos ?? 0
   const emAtencao = (cards?.estoqueBaixo ?? 0) + (cards?.semEstoque ?? 0)
-  const percentualOtimo =
-    totalProdutos > 0
+  // So com os cards na mao: carregando ou com erro, nao ha percentual a mostrar
+  // (antes aparecia "100% otimizado" justamente quando nao se sabia nada).
+  const percentualOtimo = !cards
+    ? null
+    : totalProdutos > 0
       ? Math.max(0, Math.round(((totalProdutos - emAtencao) / totalProdutos) * 100))
       : 100
-
-  const ultimaEntradaPorProduto = useMemo(() => {
-    const mapa = new Map()
-    for (const mov of entradasRecentes.data?.dados ?? []) {
-      const produtoId = mov.produto?.id ?? mov.produtoId
-      if (produtoId == null || mapa.has(produtoId)) continue
-      mapa.set(produtoId, mov.criadoEm)
-    }
-    return mapa
-  }, [entradasRecentes.data])
-
-  const valorEmRisco = produtosAtencao.reduce((acc, p) => {
-    const preco = Number(p.precoVenda) || 0
-    const faltando = Math.max(0, (p.estoqueMinimo ?? 0) - (p.quantidadeAtual ?? 0))
-    return acc + faltando * preco
-  }, 0)
+  // Somado no servidor sobre todo o catalogo, nao so sobre os 10 da lista.
+  const valorEmRisco = cards?.valorEmRisco ?? null
 
   const kpis = [
     {
       chave: 'total',
       rotulo: 'Total de itens',
-      valor: totalProdutos,
+      valor: cards ? totalProdutos : '—',
       meta: <span className="kpi-pill kpi-pill-ok">Catálogo ativo</span>,
       tom: 'neutro',
       Icone: IconeProdutos,
@@ -84,7 +67,7 @@ export function Dashboard() {
     {
       chave: 'baixo',
       rotulo: 'Estoque baixo',
-      valor: cards?.estoqueBaixo ?? 0,
+      valor: cards?.estoqueBaixo ?? '—',
       meta: <span className="kpi-pill kpi-pill-warn">ATENÇÃO</span>,
       tom: 'alerta',
       Icone: IconeAlerta,
@@ -93,7 +76,7 @@ export function Dashboard() {
     {
       chave: 'zerado',
       rotulo: 'Sem estoque',
-      valor: cards?.semEstoque ?? 0,
+      valor: cards?.semEstoque ?? '—',
       meta: <span className="kpi-pill kpi-pill-danger">Urgente</span>,
       tom: 'urgente',
       Icone: IconeCaixaVazia,
@@ -102,7 +85,7 @@ export function Dashboard() {
     {
       chave: 'entradas',
       rotulo: 'Entradas (hoje)',
-      valor: cards?.entradasHoje ?? 0,
+      valor: cards?.entradasHoje ?? '—',
       meta: (
         <Link to="/movimentacoes?tipo=ENTRADA" className="text-body-sm" style={{ color: 'var(--primary-medium)' }}>
           Ver histórico
@@ -148,7 +131,7 @@ export function Dashboard() {
       chave: 'ultimaReposicao',
       titulo: 'Última reposição',
       render: (p) => (
-        <span className="text-mono text-body-sm">{formatarReposicao(ultimaEntradaPorProduto.get(p.id))}</span>
+        <span className="text-mono text-body-sm">{formatarReposicao(p.ultimaReposicao)}</span>
       ),
     },
     {
@@ -175,7 +158,11 @@ export function Dashboard() {
   return (
     <Layout
       titulo={primeiroNome ? `Bem-vindo de volta, ${primeiroNome}!` : 'Bem-vindo de volta!'}
-      subtitulo={`Seu inventário está ${percentualOtimo}% otimizado. Priorize os alertas e registre entradas e saídas.`}
+      subtitulo={
+        percentualOtimo === null
+          ? 'Priorize os alertas e registre entradas e saídas.'
+          : `Seu inventário está ${percentualOtimo}% otimizado. Priorize os alertas e registre entradas e saídas.`
+      }
       menu={menu}
     >
       <section className="kpi-grid" aria-label="Resumo do estoque">
@@ -203,6 +190,7 @@ export function Dashboard() {
             dados={produtosAtencao}
             chaveDaLinha={(p) => p.id}
             carregando={dashboard.isLoading}
+            erro={dashboard.error}
             vazio={
               <EstadoVazio
                 titulo="Nenhum alerta no momento"
@@ -217,12 +205,16 @@ export function Dashboard() {
             Insights
           </p>
           <p className="kpi-valor kpi-valor-sm" style={{ color: 'inherit' }}>
-            {MOEDA.format(valorEmRisco)}
+            {valorEmRisco === null ? '—' : MOEDA.format(valorEmRisco)}
           </p>
           <p>
-            {valorEmRisco > 0
-              ? 'Valor abaixo do mínimo — priorize a reposição para evitar ruptura.'
-              : 'Nenhum valor em risco no momento. Continue acompanhando as entradas e saídas do dia.'}
+            {valorEmRisco === null
+              ? dashboard.isError
+                ? 'Não foi possível calcular agora. Tente recarregar a página.'
+                : 'Calculando…'
+              : valorEmRisco > 0
+                ? 'Falta isso, em preço de venda, para todo o estoque voltar ao mínimo. Priorize a reposição para evitar ruptura.'
+                : 'Nenhum valor em risco no momento. Continue acompanhando as entradas e saídas do dia.'}
           </p>
           <Link to="/produtos?status=PRECISA_REPOR" className="btn">
             Ver produtos em atenção
@@ -253,6 +245,7 @@ export function Dashboard() {
           dados={produtosResumo}
           chaveDaLinha={(p) => p.id}
           carregando={resumo.isLoading}
+          erro={resumo.error}
           vazio={
             <EstadoVazio
               titulo="Nenhum produto cadastrado ainda"

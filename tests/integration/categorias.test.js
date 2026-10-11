@@ -193,4 +193,26 @@ describe.skipIf(!temBanco())('/api/categorias', () => {
     expect(categoria.totalProdutos).toBe(2)
     expect(categoria.unidadesEmEstoque).toBe(8)
   })
+  it('reativa categoria inativa (so gestor) e recusa reativar a que ja esta ativa', async () => {
+    const { body } = await criar({ nome: NOME })
+    const id = body.dados.id
+    await cliente.delete(`/api/categorias/${id}`)
+
+    const operador = request.agent(app)
+    await operador.post('/api/auth/login').send({
+      email: 'teste.categorias.operador@exemplo.com',
+      senha: SENHA,
+    })
+    expect((await operador.post(`/api/categorias/${id}/reativar`)).status).toBe(403)
+
+    expect((await cliente.post(`/api/categorias/${id}/reativar`)).status).toBe(204)
+    const padrao = await cliente.get('/api/categorias')
+    expect(padrao.body.dados.map((c) => c.id)).toContain(id)
+
+    const deNovo = await cliente.post(`/api/categorias/${id}/reativar`)
+    expect(deNovo.status).toBe(400)
+    expect(deNovo.body.erro.codigo).toBe('REGRA_NEGOCIO')
+
+    expect((await cliente.post('/api/categorias/99999999/reativar')).status).toBe(404)
+  })
 })

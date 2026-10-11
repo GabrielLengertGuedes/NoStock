@@ -5,6 +5,10 @@ export async function listar(req, res) {
   res.json(await servico.listar(req.validado.query))
 }
 
+export async function resumo(_req, res) {
+  res.json({ dados: await servico.obterResumo() })
+}
+
 export async function buscarPorId(req, res) {
   res.json({ dados: await servico.buscarPorId(req.validado.params.id) })
 }
@@ -12,7 +16,7 @@ export async function buscarPorId(req, res) {
 export async function criar(req, res) {
   const produto = await servico.criar({
     ...req.validado.body,
-    usuarioId: req.session.usuarioId,
+    usuarioId: req.usuario.id,
   })
   res.status(201).json({ dados: produto })
 }

@@ -11,13 +11,15 @@ export const rotas = Router()
 const soGestor = [requireAuth, requireRole('GESTOR')]
 
 rotas.get('/', requireAuth, validate({ query: filtrosDeListagem }), controlador.listar)
+// Antes de /:id, senao "resumo" seria lido como id.
+rotas.get('/resumo', requireAuth, controlador.resumo)
+rotas.get('/:id', requireAuth, validate({ params: parametroId }), controlador.buscarPorId)
 rotas.get(
   '/:id/movimentacoes',
   requireAuth,
   validate({ params: parametroId, query: filtrosDeMovimentacoes }),
   controlador.listarMovimentacoes,
 )
-rotas.get('/:id', requireAuth, validate({ params: parametroId }), controlador.buscarPorId)
 rotas.post('/', requireAuth, validate({ body: corpoDeCriacao }), controlador.criar)
 rotas.put(
   '/:id',

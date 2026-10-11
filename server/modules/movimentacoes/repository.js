@@ -71,7 +71,7 @@ export async function listar(filtros, conexao = obterPool()) {
     `select ${SELECAO_LISTAGEM}
        ${JUNCOES_LISTAGEM}
        ${onde}
-       order by m.criado_em desc
+       order by m.criado_em desc, m.id desc
        limit ${limite} offset ${deslocamento}`,
     [...valores, porPagina, (pagina - 1) * porPagina],
   )

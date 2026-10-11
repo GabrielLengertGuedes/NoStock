@@ -1,41 +1,39 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 import { api } from './client.js'
 
 export const CHAVE = ['fornecedores']
 
-export function useFornecedores() {
+// Por padrao so os ativos: e o que os selects de produto podem oferecer.
+export function useFornecedores({ incluirInativos = false } = {}) {
   return useQuery({
-    queryKey: CHAVE,
-    queryFn: async () => (await api.get('/fornecedores')).dados,
+    queryKey: [...CHAVE, { incluirInativos }],
+    queryFn: async () =>
+      (await api.get('/fornecedores', { params: incluirInativos ? { incluirInativos: 'true' } : {} })).dados,
   })
 }
 
-function useAoConcluir() {
-  const cliente = useQueryClient()
-  return () => cliente.invalidateQueries({ queryKey: CHAVE })
-}
-
+// Invalidacao do cache depois de cada escrita: ver queryClient.js.
 export function useCriarFornecedor() {
-  const aoConcluir = useAoConcluir()
   return useMutation({
     mutationFn: async (dados) => (await api.post('/fornecedores', dados)).dados,
-    onSuccess: aoConcluir,
   })
 }
 
 export function useAtualizarFornecedor() {
-  const aoConcluir = useAoConcluir()
   return useMutation({
     mutationFn: async ({ id, ...dados }) => (await api.put(`/fornecedores/${id}`, dados)).dados,
-    onSuccess: aoConcluir,
   })
 }
 
 export function useInativarFornecedor() {
-  const aoConcluir = useAoConcluir()
   return useMutation({
     mutationFn: (id) => api.delete(`/fornecedores/${id}`),
-    onSuccess: aoConcluir,
+  })
+}
+
+export function useReativarFornecedor() {
+  return useMutation({
+    mutationFn: (id) => api.post(`/fornecedores/${id}/reativar`),
   })
 }

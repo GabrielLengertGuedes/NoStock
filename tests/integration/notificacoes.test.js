@@ -15,7 +15,7 @@ vi.mock('web-push', () => ({ default: webpush }))
 
 // A migracao roda dentro da transacao do teste. No banco do CI ela ja foi
 // aplicada e nao muda nada; no de desenvolvimento, a tabela existe so ate o rollback.
-const MIGRACAO = readFileSync(new URL('../../db/migrations/002-inscricoes-push.sql', import.meta.url), 'utf8')
+const MIGRACAO = readFileSync(new URL('../../db/migrations/003-inscricoes-push.sql', import.meta.url), 'utf8')
 
 const SENHA = 'Senha123'
 const CHAVES = { p256dh: 'BChavePublicaDoAparelho', auth: 'segredo-auth' }

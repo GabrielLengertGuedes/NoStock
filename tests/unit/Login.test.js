@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
@@ -11,9 +12,13 @@ describe('Login', () => {
   it('mostra os campos de acesso, sem rodapé nem login social', () => {
     const html = renderToStaticMarkup(
       createElement(
-        MemoryRouter,
-        { initialEntries: ['/login'] },
-        createElement(ToastProvider, null, createElement(AuthProvider, null, createElement(Login))),
+        QueryClientProvider,
+        { client: new QueryClient() },
+        createElement(
+          MemoryRouter,
+          { initialEntries: ['/login'] },
+          createElement(ToastProvider, null, createElement(AuthProvider, null, createElement(Login))),
+        ),
       ),
     )
 
@@ -23,7 +28,8 @@ describe('Login', () => {
     expect(html).toContain('Entrar no Sistema')
     expect(html).toContain('Bem-vindo de volta')
     expect(html).toContain('Esqueci a senha')
-    expect(html).toContain('Manter conectado por 30 dias')
+    // A sessao cai depois de 8 h sem uso: a opcao prometia o que nao existia.
+    expect(html).not.toContain('Manter conectado')
     expect(html).not.toContain('Google')
     expect(html).not.toContain('Apple')
   })

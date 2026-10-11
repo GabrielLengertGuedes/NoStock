@@ -30,7 +30,7 @@ export async function obterRankingPorCategoria({ de, ate, categoriaId }, conexao
         and m.criado_em between $1 and $2
         and ($3::int is null or c.id = $3::int)
       group by c.id, c.nome, p.id, p.nome
-      order by c.nome, unidades desc`,
+      order by c.nome, unidades desc, p.nome, p.id`,
     [de, ate, categoriaId ?? null],
   )
   return rows
@@ -49,7 +49,7 @@ export async function obterDistribuicaoPorCategoria(conexao = obterPool()) {
       left join public.produtos p on p.categoria_id = c.id and p.ativo
      where c.ativo
      group by c.id, c.nome
-     order by unidades desc
+     order by unidades desc, c.nome
   `)
   return rows
 }
@@ -85,11 +85,14 @@ export async function obterVendasESaldoMedioPorProduto({ de, ate, categoriaId },
                 sum(saldo_posterior - saldo_anterior)
                   filter (where criado_em > $2) as apos_fim
            from public.movimentacoes
+          -- As duas somas so olham depois do inicio: sem este filtro a
+          -- consulta agregava a tabela inteira, que so cresce.
+          where criado_em >= $1
           group by produto_id
        ) deltas on deltas.produto_id = p.id
       where p.ativo
         and ($3::int is null or c.id = $3::int)
-      order by p.nome`,
+      order by p.nome, p.id`,
     [de, ate, categoriaId ?? null],
   )
   return rows
