@@ -32,9 +32,12 @@ const descricao = z
   .nullish()
   .transform((valor) => valor || null)
 
-const precoVenda = z.number().nonnegative('Não pode ser negativo')
+const precoVenda = z.number({ error: 'Informe o preço' }).nonnegative('Não pode ser negativo')
 
-const categoriaId = z.number().int().positive()
+const categoriaId = z
+  .number({ error: 'Selecione uma categoria' })
+  .int('Selecione uma categoria')
+  .positive('Selecione uma categoria')
 
 const fornecedorId = z
   .number()
@@ -44,7 +47,12 @@ const fornecedorId = z
   .transform((valor) => valor ?? null)
 
 // Corpo JSON chega com o tipo certo: aqui e numero de verdade, nao precisa de coerce.
-const quantidadeNaoNegativa = (mensagem) => z.number().int().nonnegative(mensagem).optional().default(0)
+// Sem default: estoque minimo vazio virando 0 desligava o alerta de reposicao
+// do produto sem ninguem perceber. Zero continua valendo, desde que digitado.
+const quantidade = z
+  .number({ error: 'Informe a quantidade' })
+  .int('Use um número inteiro')
+  .nonnegative('Não pode ser negativo')
 
 export const corpoDeCriacao = z.object({
   nome,
@@ -52,8 +60,8 @@ export const corpoDeCriacao = z.object({
   categoriaId,
   fornecedorId,
   precoVenda,
-  estoqueInicial: quantidadeNaoNegativa('Não pode ser negativo'),
-  estoqueMinimo: quantidadeNaoNegativa('Não pode ser negativo'),
+  estoqueInicial: quantidade,
+  estoqueMinimo: quantidade,
   confirmarNomeDuplicado: z.boolean().optional().default(false),
 })
 
@@ -67,7 +75,7 @@ export const corpoDeAtualizacao = z
     categoriaId,
     fornecedorId,
     precoVenda,
-    estoqueMinimo: z.number().int().nonnegative('Não pode ser negativo'),
+    estoqueMinimo: quantidade,
     confirmarNomeDuplicado: z.boolean().optional().default(false),
     quantidadeAtual: z.unknown().optional(),
   })

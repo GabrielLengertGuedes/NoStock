@@ -7,6 +7,7 @@ import {
   useInativarFornecedor,
 } from '../api/fornecedores.js'
 import { Campo } from '../components/Campo.jsx'
+import { CampoComMascara } from '../components/CampoComMascara.jsx'
 import { EstadoVazio } from '../components/EstadoVazio.jsx'
 import { IconeAlerta, IconeFornecedores, IconeProdutos } from '../components/IconesBioma.jsx'
 import { KpiCard } from '../components/KpiCard.jsx'
@@ -14,16 +15,13 @@ import { Layout } from '../components/Layout.jsx'
 import { MenuAcoes } from '../components/MenuAcoes.jsx'
 import { Modal } from '../components/Modal.jsx'
 import { ProdutoThumb } from '../components/ProdutoThumb.jsx'
+import { TelefoneFornecedor } from '../components/TelefoneFornecedor.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
+import { CARACTERE_CNPJ, mascararCnpj } from '../lib/cnpj.js'
+import { CARACTERE_TELEFONE, formatarTelefone, mascararTelefone } from '../lib/telefone.js'
 
 const VAZIA = { nome: '', cnpj: '', contato_nome: '', telefone: '', email: '', observacao: '' }
-
-// Função utilitária para aplicar máscara no CNPJ para exibição
-function formatarCnpj(cnpj) {
-  if (!cnpj) return '—'
-  return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
-}
 
 export function Fornecedores() {
   const { temPapel } = useAuth()
@@ -49,9 +47,9 @@ export function Fornecedores() {
       fornecedor
         ? {
             nome: fornecedor.nome,
-            cnpj: fornecedor.cnpj ?? '',
+            cnpj: mascararCnpj(fornecedor.cnpj),
             contato_nome: fornecedor.contato_nome ?? '',
-            telefone: fornecedor.telefone ?? '',
+            telefone: formatarTelefone(fornecedor.telefone),
             email: fornecedor.email ?? '',
             observacao: fornecedor.observacao ?? '',
           }
@@ -159,11 +157,11 @@ export function Fornecedores() {
                 ) : null}
               </div>
               <h3>{fornecedor.nome}</h3>
-              <p className="sku-codigo">{formatarCnpj(fornecedor.cnpj)}</p>
+              <p className="sku-codigo">{mascararCnpj(fornecedor.cnpj) || '—'}</p>
               <div className="catalogo-contato">
                 <span>{fornecedor.contato_nome || 'Sem contato'}</span>
                 {fornecedor.telefone ? (
-                  <a href={`tel:${fornecedor.telefone}`}>{fornecedor.telefone}</a>
+                  <TelefoneFornecedor nome={fornecedor.nome} telefone={fornecedor.telefone} />
                 ) : (
                   <span>—</span>
                 )}
@@ -213,12 +211,16 @@ export function Fornecedores() {
             erro={erroDoServidor?.campos?.nome}
           />
           <div className="produto-form-duas-colunas">
-          <Campo
+          <CampoComMascara
             id="fornecedor-cnpj"
             rotulo="CNPJ"
             ajuda="Opcional."
+            autoCapitalize="characters"
+            placeholder="00.000.000/0000-00"
             value={formulario.cnpj}
-            onChange={(e) => setFormulario({ ...formulario, cnpj: e.target.value })}
+            mascarar={mascararCnpj}
+            aceita={CARACTERE_CNPJ}
+            aoMudar={(cnpj) => setFormulario({ ...formulario, cnpj })}
             erro={erroDoServidor?.campos?.cnpj}
           />
           <Campo
@@ -231,18 +233,23 @@ export function Fornecedores() {
           />
           </div>
           <div className="produto-form-duas-colunas">
-          <Campo
+          <CampoComMascara
             id="fornecedor-telefone"
             rotulo="Telefone"
-            ajuda="Opcional."
+            type="tel"
+            ajuda="Com DDD. Informe telefone, e-mail ou os dois."
+            placeholder="(47) 99999-8888"
             value={formulario.telefone}
-            onChange={(e) => setFormulario({ ...formulario, telefone: e.target.value })}
+            mascarar={mascararTelefone}
+            aceita={CARACTERE_TELEFONE}
+            aoMudar={(telefone) => setFormulario({ ...formulario, telefone })}
             erro={erroDoServidor?.campos?.telefone}
           />
           <Campo
             id="fornecedor-email"
             rotulo="E-mail"
-            ajuda="Opcional."
+            type="email"
+            ajuda="Informe telefone, e-mail ou os dois."
             value={formulario.email}
             onChange={(e) => setFormulario({ ...formulario, email: e.target.value })}
             erro={erroDoServidor?.campos?.email}

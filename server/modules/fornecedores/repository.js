@@ -24,6 +24,20 @@ export async function buscarPorId(id, conexao = obterPool()) {
   return rows[0] ?? null
 }
 
+// Ignora caixa e acento: "Pet Sul" e "pet súl" sao o mesmo fornecedor.
+export async function existeAtivoComMesmoNome({ nome, excluirId }, conexao = obterPool()) {
+  const condicaoId = excluirId ? 'and id != $2' : ''
+  const valores = excluirId ? [nome, excluirId] : [nome]
+
+  const { rows } = await conexao.query(
+    `select 1 from public.fornecedores
+     where public.sem_acento(lower(nome)) = public.sem_acento(lower($1)) and ativo ${condicaoId}
+     limit 1`,
+    valores,
+  )
+  return rows.length > 0
+}
+
 export async function criar(dados, conexao = obterPool()) {
   const { rows } = await conexao.query(
     `insert into public.fornecedores (nome, cnpj, contato_nome, telefone, email, observacao)

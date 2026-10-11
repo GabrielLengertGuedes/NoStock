@@ -24,7 +24,7 @@ const FORM_VAZIO = {
   fornecedorId: '',
   precoVenda: '',
   estoqueInicial: '',
-  estoqueMinimo: '0',
+  estoqueMinimo: '',
 }
 
 function camposDoProduto(produto) {
@@ -90,8 +90,8 @@ export function ProdutoFormulario() {
       categoriaId: formulario.categoriaId === '' ? null : Number(formulario.categoriaId),
       fornecedorId: formulario.fornecedorId ? Number(formulario.fornecedorId) : null,
       precoVenda: formulario.precoVenda === '' ? null : Number(formulario.precoVenda),
-      estoqueMinimo: formulario.estoqueMinimo === '' ? 0 : Number(formulario.estoqueMinimo),
-      ...(editando ? {} : { estoqueInicial: formulario.estoqueInicial === '' ? 0 : Number(formulario.estoqueInicial) }),
+      estoqueMinimo: formulario.estoqueMinimo === '' ? null : Number(formulario.estoqueMinimo),
+      ...(editando ? {} : { estoqueInicial: formulario.estoqueInicial === '' ? null : Number(formulario.estoqueInicial) }),
       confirmarNomeDuplicado: forcarDuplicado || confirmarDuplicado,
     }
   }
@@ -281,6 +281,7 @@ export function ProdutoFormulario() {
                 min="0"
                 step="1"
                 obrigatorio
+                ajuda="Com 0, o produto só entra na reposição quando zerar."
                 value={formulario.estoqueMinimo}
                 onChange={(e) => setFormulario({ ...formulario, estoqueMinimo: e.target.value })}
                 erro={erroDoServidor?.campos?.estoqueMinimo}
@@ -306,6 +307,7 @@ export function ProdutoFormulario() {
                 type="number"
                 min="0"
                 step="1"
+                obrigatorio
                 ajuda="Gera movimentação de estoque inicial ao salvar."
                 value={formulario.estoqueInicial}
                 onChange={(e) => setFormulario({ ...formulario, estoqueInicial: e.target.value })}

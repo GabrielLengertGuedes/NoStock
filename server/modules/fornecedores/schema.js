@@ -11,43 +11,33 @@ export const filtrosDeListagem = z.object({
     .transform((valor) => valor === 'true'),
 })
 
-function validarCnpj(cnpj) {
-  if (cnpj.length !== 14 || /^(\d)\1+$/.test(cnpj)) return false
-
-  let tamanho = cnpj.length - 2
-  let numeros = cnpj.substring(0, tamanho)
-  let digitos = cnpj.substring(tamanho)
+// Desde julho de 2026 a Receita emite CNPJ alfanumerico: as 12 primeiras
+// posicoes aceitam letra e os 2 digitos verificadores seguem numericos. No
+// calculo cada caractere vale o codigo ASCII menos 48 ('0' = 0, 'A' = 17), o
+// que mantem o CNPJ so de numeros com o mesmo resultado de antes.
+function digitoVerificador(base) {
   let soma = 0
-  let pos = tamanho - 7
-
-  for (let i = tamanho; i >= 1; i--) {
-    soma += numeros.charAt(tamanho - i) * pos--
-    if (pos < 2) pos = 9
+  let peso = 2
+  for (let i = base.length - 1; i >= 0; i--) {
+    soma += (base.charCodeAt(i) - 48) * peso
+    peso = peso === 9 ? 2 : peso + 1
   }
-  
-  let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11)
-  if (resultado != digitos.charAt(0)) return false
+  const resto = soma % 11
+  return resto < 2 ? 0 : 11 - resto
+}
 
-  tamanho = tamanho + 1
-  numeros = cnpj.substring(0, tamanho)
-  soma = 0
-  pos = tamanho - 7
+function validarCnpj(cnpj) {
+  if (!/^[0-9A-Z]{12}\d{2}$/.test(cnpj) || /^(.)\1+$/.test(cnpj)) return false
 
-  for (let i = tamanho; i >= 1; i--) {
-    soma += numeros.charAt(tamanho - i) * pos--
-    if (pos < 2) pos = 9
-  }
-  
-  resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11)
-  if (resultado != digitos.charAt(1)) return false
-
-  return true
+  const primeiro = digitoVerificador(cnpj.slice(0, 12))
+  const segundo = digitoVerificador(cnpj.slice(0, 12) + primeiro)
+  return cnpj.endsWith(`${primeiro}${segundo}`)
 }
 
 const cnpj = z
   .string()
   .trim()
-  .transform((v) => v.replace(/[^\d]+/g, ''))
+  .transform((v) => v.toUpperCase().replace(/[^0-9A-Z]+/g, ''))
   .refine((v) => v === '' || validarCnpj(v), 'CNPJ inválido')
   .transform((v) => (v === '' ? null : v))
   .nullish()
@@ -65,12 +55,23 @@ const contato_nome = z
   .nullish()
   .transform((valor) => valor || null)
 
+// Guardado so com digitos (DDD + numero), como o CNPJ. O 55 de quem cola
+// o numero com codigo do pais sai aqui; o link do WhatsApp poe de volta.
+function digitosDoTelefone(valor) {
+  const digitos = valor.replace(/\D+/g, '')
+  const comPais = (digitos.length === 12 || digitos.length === 13) && digitos.startsWith('55')
+  return comPais ? digitos.slice(2) : digitos
+}
+
 const telefone = z
   .string()
   .trim()
-  .max(20, 'No máximo 20 caracteres')
+  .refine(
+    (v) => v === '' || [10, 11].includes(digitosDoTelefone(v).length),
+    'Informe o telefone com DDD',
+  )
+  .transform((v) => digitosDoTelefone(v) || null)
   .nullish()
-  .transform((valor) => valor || null)
 
 const email = z
   .string()
@@ -88,20 +89,27 @@ const observacao = z
   .nullish()
   .transform((valor) => valor || null)
 
-export const corpoDeCriacao = z.object({
-  nome,
-  cnpj,
-  contato_nome,
-  telefone,
-  email,
-  observacao,
-})
+// Fornecedor sem nenhum canal deixa a sugestao de compra (RF13) sem ter para
+// quem ligar: telefone ou e-mail, ao menos um.
+function exigirTelefoneOuEmail(dados, ctx) {
+  if (dados.telefone || dados.email) return
 
-export const corpoDeAtualizacao = z.object({
-  nome,
-  cnpj,
-  contato_nome,
-  telefone,
-  email,
-  observacao,
-})
+  for (const campo of ['telefone', 'email']) {
+    ctx.addIssue({ code: 'custom', path: [campo], message: 'Informe um telefone ou um e-mail' })
+  }
+}
+
+const corpo = z
+  .object({
+    nome,
+    cnpj,
+    contato_nome,
+    telefone,
+    email,
+    observacao,
+  })
+  .superRefine(exigirTelefoneOuEmail)
+
+export const corpoDeCriacao = corpo
+
+export const corpoDeAtualizacao = corpo

@@ -6,11 +6,12 @@ import { criarApp } from '../../server/app.js'
 import { obterPool } from '../../server/db/pool.js'
 import { abrirTransacao, desfazerTransacao, temBanco } from '../helpers/banco.js'
 
-const NOME = 'Fornecedor Teste'
+const NOME = 'Fornecedor Teste Automatizado' // o banco é compartilhado: nome que ninguém cadastra à mão
 const CNPJ_VALIDO = '19.980.203/0001-10'
 const CNPJ_VALIDO_LIMPO = '19980203000110'
 const CNPJ_INVALIDO = '19.980.203/0001-11' // digito errado
 const SENHA = 'Senha123'
+const TELEFONE = '(47) 99999-8888'
 
 describe.skipIf(!temBanco())('/api/fornecedores', () => {
   let app
@@ -44,7 +45,8 @@ describe.skipIf(!temBanco())('/api/fornecedores', () => {
 
   afterEach(desfazerTransacao)
 
-  const criar = (corpo) => cliente.post('/api/fornecedores').send(corpo)
+  // Telefone ou e-mail e obrigatorio: os casos que nao testam isso levam o telefone padrao.
+  const criar = (corpo) => cliente.post('/api/fornecedores').send({ telefone: TELEFONE, ...corpo })
 
   it('recusa leitura sem sessao com 401', async () => {
     const resposta = await request(app).get('/api/fornecedores')
@@ -96,6 +98,55 @@ describe.skipIf(!temBanco())('/api/fornecedores', () => {
     expect(resposta.body.dados.id).toBeGreaterThan(0)
   })
 
+  it('recusa fornecedor sem telefone e sem e-mail com 422', async () => {
+    const resposta = await criar({ nome: NOME, telefone: '', email: '' })
+
+    expect(resposta.status).toBe(422)
+    expect(resposta.body.erro.campos.telefone).toBe('Informe um telefone ou um e-mail')
+    expect(resposta.body.erro.campos.email).toBe('Informe um telefone ou um e-mail')
+  })
+
+  it('aceita so o e-mail como contato', async () => {
+    const resposta = await criar({ nome: NOME, telefone: null, email: 'compras@petsul.com.br' })
+
+    expect(resposta.status).toBe(201)
+    expect(resposta.body.dados.telefone).toBeNull()
+  })
+
+  it('guarda o telefone so com digitos, sem o 55 do pais', async () => {
+    const resposta = await criar({ nome: NOME, telefone: '+55 (47) 99999-8888' })
+
+    expect(resposta.status).toBe(201)
+    expect(resposta.body.dados.telefone).toBe('47999998888')
+  })
+
+  it('recusa telefone sem DDD com 422', async () => {
+    const resposta = await criar({ nome: NOME, telefone: '9999-8888' })
+
+    expect(resposta.status).toBe(422)
+    expect(resposta.body.erro.campos.telefone).toBe('Informe o telefone com DDD')
+  })
+
+  it('recusa nome de fornecedor ativo repetido, ignorando caixa e acento, com 409', async () => {
+    await criar({ nome: 'Distribuidora Teste Duplicada' })
+    const resposta = await criar({ nome: 'distribuidora teste duplicadá' })
+
+    expect(resposta.status).toBe(409)
+    expect(resposta.body.erro.codigo).toBe('CONFLITO')
+    expect(resposta.body.erro.campos.nome).toBeDefined()
+  })
+
+  it('permite salvar o fornecedor mantendo o proprio nome', async () => {
+    const criado = await criar({ nome: NOME })
+
+    const resposta = await cliente
+      .put(`/api/fornecedores/${criado.body.dados.id}`)
+      .send({ nome: NOME, telefone: TELEFONE, observacao: 'Entrega às terças' })
+
+    expect(resposta.status).toBe(200)
+    expect(resposta.body.dados.observacao).toBe('Entrega às terças')
+  })
+
   it('recusa CNPJ com erro de validação (digito verificador) com 422', async () => {
     const resposta = await criar({ nome: NOME, cnpj: CNPJ_INVALIDO })
 
@@ -111,6 +162,20 @@ describe.skipIf(!temBanco())('/api/fornecedores', () => {
     expect(resposta.status).toBe(409)
     expect(resposta.body.erro.codigo).toBe('CONFLITO')
     expect(resposta.body.erro.campos.cnpj).toBeDefined()
+  })
+
+  it('aceita o CNPJ alfanumerico e guarda em maiuscula', async () => {
+    const resposta = await criar({ nome: NOME, cnpj: '12.abc.345/01de-35' })
+
+    expect(resposta.status).toBe(201)
+    expect(resposta.body.dados.cnpj).toBe('12ABC34501DE35')
+  })
+
+  it('recusa CNPJ alfanumerico com digito verificador errado com 422', async () => {
+    const resposta = await criar({ nome: NOME, cnpj: '12.ABC.345/01DE-36' })
+
+    expect(resposta.status).toBe(422)
+    expect(resposta.body.erro.campos.cnpj).toBe('CNPJ inválido')
   })
 
   it('permite criar multiplos fornecedores sem CNPJ', async () => {

@@ -13,6 +13,16 @@ function conflitoDeCnpj(erro, cnpj) {
 
 const naoEncontrado = () => new AppError('NAO_ENCONTRADO', 'Fornecedor não encontrado.')
 
+// Com CNPJ opcional, o nome e o que separa um fornecedor do outro: repetido,
+// os produtos se dividem entre dois cadastros e a reposicao mostra dois grupos.
+async function recusarSeNomeRepetido(nome, excluirId) {
+  if (!(await repositorio.existeAtivoComMesmoNome({ nome, excluirId }))) return
+
+  throw new AppError('CONFLITO', `Já existe um fornecedor ativo chamado "${nome}".`, {
+    nome: 'Já existe um fornecedor com esse nome',
+  })
+}
+
 export function listar(filtros) {
   return repositorio.listar(filtros)
 }
@@ -24,6 +34,8 @@ export async function buscarPorId(id) {
 }
 
 export async function criar(dados) {
+  await recusarSeNomeRepetido(dados.nome)
+
   try {
     return await repositorio.criar(dados)
   } catch (erro) {
@@ -32,6 +44,8 @@ export async function criar(dados) {
 }
 
 export async function atualizar(id, dados) {
+  await recusarSeNomeRepetido(dados.nome, id)
+
   let fornecedor
   try {
     fornecedor = await repositorio.atualizar(id, dados)
