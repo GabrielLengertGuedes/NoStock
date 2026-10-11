@@ -10,7 +10,7 @@ export async function listar({ incluirInativos = false } = {}, conexao = obterPo
      left join public.produtos p on p.fornecedor_id = f.id and p.ativo = true
      where ($1 or f.ativo)
      group by f.id
-     order by f.nome`,
+     order by f.nome, f.id`,
     [incluirInativos],
   )
   return rows
@@ -60,6 +60,15 @@ export async function inativar(id, conexao = obterPool()) {
   const { rows } = await conexao.query(
     `update public.fornecedores set ativo = false
      where id = $1 and ativo returning ${COLUNAS}`,
+    [id],
+  )
+  return rows[0] ?? null
+}
+
+export async function reativar(id, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `update public.fornecedores set ativo = true
+     where id = $1 and not ativo returning ${COLUNAS}`,
     [id],
   )
   return rows[0] ?? null

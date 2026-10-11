@@ -53,6 +53,15 @@ export async function inativar(id, conexao = obterPool()) {
   return rows[0] ?? null
 }
 
+export async function reativar(id, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `update public.categorias set ativo = true
+     where id = $1 and not ativo returning ${COLUNAS}`,
+    [id],
+  )
+  return rows[0] ?? null
+}
+
 export async function temProdutosAtivos(id, conexao = obterPool()) {
   const { rows } = await conexao.query(
     `select 1 from public.produtos where categoria_id = $1 and ativo = true limit 1`,

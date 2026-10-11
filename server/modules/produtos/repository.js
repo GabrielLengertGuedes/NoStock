@@ -4,6 +4,13 @@ import { statusEstoqueSql } from '../../shared/statusEstoque.js'
 
 const STATUS_SQL = statusEstoqueSql('p.quantidade_atual', 'p.estoque_minimo')
 
+// Ultima compra do produto. Estoque inicial, devolucao e ajuste nao contam:
+// reposicao e quando a loja comprou mais. Usa ix_mov_produto_criado.
+export const ULTIMA_REPOSICAO_SQL = `(
+  select max(mr.criado_em) from public.movimentacoes mr
+   where mr.produto_id = p.id and mr.tipo = 'ENTRADA' and mr.motivo = 'COMPRA'
+)`
+
 const COLUNA_DE_ORDENACAO = {
   nome: 'p.nome',
   quantidade: 'p.quantidade_atual',
@@ -23,6 +30,7 @@ const SELECAO = `
   p.quantidade_atual as "quantidadeAtual",
   p.estoque_minimo as "estoqueMinimo",
   ${STATUS_SQL} as "statusEstoque",
+  ${ULTIMA_REPOSICAO_SQL} as "ultimaReposicao",
   p.ativo
 `
 
@@ -80,18 +88,33 @@ export async function listar(filtros, conexao = obterPool()) {
 
   const coluna = COLUNA_DE_ORDENACAO[ordenarPor] ?? COLUNA_DE_ORDENACAO.nome
   const direcao = ordem === 'desc' ? 'desc' : 'asc'
+  // p.id desempata: sem ele, produtos com a mesma quantidade (ou o mesmo nome)
+  // trocam de ordem entre uma consulta e outra e repetem ou somem entre paginas.
   const limite = `$${valores.length + 1}`
   const deslocamento = `$${valores.length + 2}`
 
   const { rows: produtos } = await conexao.query(
     `select ${SELECAO} ${JUNCOES}
        ${onde}
-       order by ${coluna} ${direcao}
+       order by ${coluna} ${direcao}, p.id ${direcao}
        limit ${limite} offset ${deslocamento}`,
     [...valores, porPagina, (pagina - 1) * porPagina],
   )
 
   return { produtos, total }
+}
+
+// Indicadores da tela de Produtos, somados no banco: antes o front percorria
+// o catalogo inteiro, 100 produtos por requisicao, para chegar no valor.
+export async function obterResumo(conexao = obterPool()) {
+  const { rows } = await conexao.query(`
+    select count(*)::int as "totalProdutos",
+           count(*) filter (where (${STATUS_SQL}) <> 'NORMAL')::int as "precisamRepor",
+           coalesce(sum(p.quantidade_atual * p.preco_venda), 0)::float8 as "valorInventario"
+      from public.produtos p
+     where p.ativo
+  `)
+  return rows[0]
 }
 
 export async function buscarPorId(id, conexao = obterPool()) {

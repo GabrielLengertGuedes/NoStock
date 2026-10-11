@@ -23,7 +23,7 @@ export async function obterItensParaRepor({ fornecedorId, status }, conexao = ob
         and p.quantidade_atual <= p.estoque_minimo
         and ($1::int is null or p.fornecedor_id = $1::int)
         and ($2::text is null or (${STATUS_SQL}) = $2::text)
-      order by f.nome nulls last, p.nome`,
+      order by f.nome nulls last, f.id, p.nome, p.id`,
     [fornecedorId ?? null, status ?? null],
   )
   return rows

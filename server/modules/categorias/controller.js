@@ -21,3 +21,8 @@ export async function inativar(req, res) {
   await servico.inativar(req.validado.params.id)
   res.status(204).end()
 }
+
+export async function reativar(req, res) {
+  await servico.reativar(req.validado.params.id)
+  res.status(204).end()
+}
