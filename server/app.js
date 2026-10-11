@@ -17,6 +17,7 @@ import { rotas as categorias } from './modules/categorias/routes.js'
 import { rotas as dashboard } from './modules/dashboard/routes.js'
 import { rotas as fornecedores } from './modules/fornecedores/routes.js'
 import { rotas as movimentacoes } from './modules/movimentacoes/routes.js'
+import { rotas as notificacoes } from './modules/notificacoes/routes.js'
 import { rotas as produtos } from './modules/produtos/routes.js'
 import { rotas as relatorios } from './modules/relatorios/routes.js'
 import { rotas as reposicao } from './modules/reposicao/routes.js'
@@ -46,7 +47,17 @@ export function criarApp() {
 
   // Front compilado pelo `vite build`. Fica antes da sessao: arquivo estatico
   // nao precisa ir ao banco buscar a sessao de ninguem.
-  if (env.producao) app.use(express.static(join(raiz, 'dist')))
+  // O service worker sai sempre sem cache: com cache, o celular seguiria rodando
+  // a versao antiga dele por horas depois de cada deploy.
+  if (env.producao) {
+    app.use(
+      express.static(join(raiz, 'dist'), {
+        setHeaders(res, caminho) {
+          if (caminho.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-cache')
+        },
+      }),
+    )
+  }
 
   app.use(express.json({ limit: '1mb' }))
 
@@ -88,6 +99,7 @@ export function criarApp() {
   app.use('/api/dashboard', dashboard)
   app.use('/api/relatorios', relatorios)
   app.use('/api/reposicao', reposicao)
+  app.use('/api/notificacoes', notificacoes)
 
   app.use('/api', (_req, _res, next) => {
     next(new AppError('NAO_ENCONTRADO', 'Rota inexistente.'))

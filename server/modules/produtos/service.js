@@ -62,8 +62,9 @@ export function obterResumo() {
   return repositorio.obterResumo()
 }
 
+// Devolve tambem produto inativo: a tela de edicao abre um produto que saiu do catalogo.
 export async function buscarPorId(id) {
-  const produto = await repositorio.buscarPorId(id)
+  const produto = await repositorio.buscarDetalhe(id)
   if (!produto) throw naoEncontrado()
   return produto
 }

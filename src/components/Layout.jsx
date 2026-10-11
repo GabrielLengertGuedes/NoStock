@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 
 import { IconeBusca } from './IconesBioma.jsx'
@@ -87,6 +87,10 @@ export function Layout({
                 {papel && <p className="layout-sidebar-usuario-papel">{papel}</p>}
               </div>
             </div>
+            {/* Só aparece em tela estreita: quem abriu a versão completa pelo celular. */}
+            <Link to="/m" className="layout-link-movel">
+              Versão celular
+            </Link>
             <button type="button" className="btn-ghost-sidebar" onClick={() => logout()}>
               Sair
             </button>

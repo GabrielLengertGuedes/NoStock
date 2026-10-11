@@ -15,6 +15,7 @@ import { Relatorios } from '../pages/Relatorios.jsx'
 import { Reposicao } from '../pages/Reposicao.jsx'
 import { Usuarios } from '../pages/Usuarios.jsx'
 import { RotaProtegida } from './RotaProtegida.jsx'
+import { RotasMovel } from './RotasMovel.jsx'
 
 function NaoEncontrada() {
   const menu = useMenuPrincipal()
@@ -129,6 +130,14 @@ export function Rotas() {
           element={
             <RotaProtegida papel="GESTOR">
               <Usuarios />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/m/*"
+          element={
+            <RotaProtegida>
+              <RotasMovel />
             </RotaProtegida>
           }
         />

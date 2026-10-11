@@ -1,6 +1,7 @@
 import { emTransacao } from '../../db/transaction.js'
 import { AppError } from '../../shared/AppError.js'
 import { statusEstoque } from '../../shared/statusEstoque.js'
+import { avisarSePiorou } from '../notificacoes/service.js'
 import * as repositorio from './repository.js'
 import { combinaTipoMotivo } from './tipoMotivo.js'
 
@@ -96,6 +97,13 @@ export async function registrar({ produtoId, tipo, motivo, quantidade, observaca
   })
 
   const movimentacao = await repositorio.buscarPorId(id)
+
+  // Depois do commit e sem esperar: o alerta push nao atrasa a resposta, e
+  // falhar ao avisar nao desfaz uma movimentacao que ja aconteceu.
+  avisarSePiorou(movimentacao).catch((erro) => {
+    console.error('Falha ao avisar a mudança de estoque por push:', erro.message)
+  })
+
   return formatarResposta(movimentacao)
 }
 

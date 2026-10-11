@@ -247,3 +247,94 @@ export function IconeCategoria({ categoria = '', ...props }) {
   if (/brinquedo|toy|bola/.test(t)) return <IconeToy {...props} />
   return <IconeProdutos {...props} />
 }
+
+/* Ícones da versão para celular (/m). */
+
+export function IconeInicio(props) {
+  return (
+    <Svg {...props}>
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" />
+    </Svg>
+  )
+}
+
+export function IconeVoltar(props) {
+  return (
+    <Svg {...props}>
+      <path d="m15 18-6-6 6-6" />
+    </Svg>
+  )
+}
+
+export function IconeAvancar(props) {
+  return (
+    <Svg {...props}>
+      <path d="m9 18 6-6-6-6" />
+    </Svg>
+  )
+}
+
+export function IconeMenos(props) {
+  return (
+    <Svg {...props}>
+      <path d="M5 12h14" />
+    </Svg>
+  )
+}
+
+export function IconeSetaEntrada(props) {
+  return (
+    <Svg {...props}>
+      <path d="M12 19V5" />
+      <path d="m6 11 6-6 6 6" />
+    </Svg>
+  )
+}
+
+export function IconeSetaSaida(props) {
+  return (
+    <Svg {...props}>
+      <path d="M12 5v14" />
+      <path d="m6 13 6 6 6-6" />
+    </Svg>
+  )
+}
+
+export function IconeTelefone(props) {
+  return (
+    <Svg {...props}>
+      <path d="M5.5 4h3.2l1.8 4.5-2.2 1.4a11 11 0 0 0 5.8 5.8l1.4-2.2 4.5 1.8v3.2a2 2 0 0 1-2 2A15.5 15.5 0 0 1 3.5 6a2 2 0 0 1 2-2Z" />
+    </Svg>
+  )
+}
+
+export function IconeCompartilhar(props) {
+  return (
+    <Svg {...props}>
+      <path d="M12 3.5v11" />
+      <path d="m8 7.5 4-4 4 4" />
+      <path d="M7 11H6a1.5 1.5 0 0 0-1.5 1.5v7A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 18 11h-1" />
+    </Svg>
+  )
+}
+
+export function IconeAdicionarTela(props) {
+  return (
+    <Svg {...props}>
+      <rect x="4" y="4" width="16" height="16" rx="4" />
+      <path d="M12 8.5v7" />
+      <path d="M8.5 12h7" />
+    </Svg>
+  )
+}
+
+export function IconeExterno(props) {
+  return (
+    <Svg {...props}>
+      <path d="M14 4h6v6" />
+      <path d="M20 4 11 13" />
+      <path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" />
+    </Svg>
+  )
+}

@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query'
 
 import { api } from './client.js'
 
@@ -15,6 +15,22 @@ export function useProdutos(filtros, { enabled = true } = {}) {
   })
 }
 
+function proximaPagina({ meta }) {
+  return meta.pagina < meta.totalPaginas ? meta.pagina + 1 : undefined
+}
+
+/** Lista que cresce com "carregar mais", para a rolagem do celular. */
+export function useProdutosEmRolagem(filtros) {
+  return useInfiniteQuery({
+    queryKey: [...CHAVE, 'rolagem', filtros],
+    queryFn: ({ pageParam }) => api.get('/produtos', { params: { ...filtros, pagina: pageParam } }),
+    initialPageParam: 1,
+    getNextPageParam: proximaPagina,
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** Um produto, ativo ou não, com o contato do fornecedor. */
 export function useProduto(id) {
   return useQuery({
     queryKey: [...CHAVE, 'detalhe', id],
