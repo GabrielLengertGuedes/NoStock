@@ -1831,6 +1831,25 @@ textarea.input-field {
   text-decoration: underline;
 }
 
+.contato-telefone {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* O padding aumenta a área de toque; a margem negativa evita que a linha cresça. */
+.contato-telefone .link-whatsapp {
+  display: inline-flex;
+  padding: 4px;
+  margin: -4px 0;
+  border-radius: var(--radius-sm);
+  color: var(--whatsapp);
+}
+
+.contato-telefone .link-whatsapp:hover {
+  background: var(--accent-pale);
+}
+
 .catalogo-card-barra {
   height: 6px;
   border-radius: 999px;

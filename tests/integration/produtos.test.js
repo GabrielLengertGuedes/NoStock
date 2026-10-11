@@ -259,6 +259,8 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
       categoriaId: categoriaHigiene,
       fornecedorId: fornecedorY,
       precoVenda: 39.9,
+      estoqueInicial: 0,
+      estoqueMinimo: 0,
     })
 
     expect(resposta.status).toBe(201)
@@ -319,6 +321,8 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
       nome: 'Ração Premium Cães Adultos', // ja existe, criado no beforeEach
       categoriaId: categoriaRacao,
       precoVenda: 50,
+      estoqueInicial: 0,
+      estoqueMinimo: 0,
     }
 
     const resposta = await criarViaApi(cliente, corpo)
@@ -335,6 +339,8 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
       nome: 'Ração Premium Cães Adultos',
       categoriaId: categoriaRacao,
       precoVenda: 50,
+      estoqueInicial: 0,
+      estoqueMinimo: 0,
       confirmarNomeDuplicado: true,
     })
 
@@ -351,6 +357,8 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
       nome: 'Ração Premium Cães Adultos',
       categoriaId: categoriaRacao,
       precoVenda: 50,
+      estoqueInicial: 0,
+      estoqueMinimo: 0,
     })
 
     expect(resposta.status).toBe(201)
@@ -358,7 +366,13 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
 
   it('recusa campo obrigatorio vazio ou numero negativo com 422', async () => {
     const cliente = await logar()
-    const base = { nome: 'Produto Válido', categoriaId: categoriaRacao, precoVenda: 10 }
+    const base = {
+      nome: 'Produto Válido',
+      categoriaId: categoriaRacao,
+      precoVenda: 10,
+      estoqueInicial: 0,
+      estoqueMinimo: 0,
+    }
 
     const semNome = await criarViaApi(cliente, { ...base, nome: '' })
     expect(semNome.status).toBe(422)
@@ -371,6 +385,36 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
     const estoqueNegativo = await criarViaApi(cliente, { ...base, estoqueInicial: -5 })
     expect(estoqueNegativo.status).toBe(422)
     expect(estoqueNegativo.body.erro.campos.estoqueInicial).toBeDefined()
+  })
+
+  it('recusa estoque inicial e estoque minimo vazios em vez de assumir zero', async () => {
+    const cliente = await logar()
+
+    const resposta = await criarViaApi(cliente, {
+      nome: 'Produto Sem Estoque Informado',
+      categoriaId: categoriaRacao,
+      precoVenda: 10,
+    })
+
+    expect(resposta.status).toBe(422)
+    expect(resposta.body.erro.campos.estoqueInicial).toBe('Informe a quantidade')
+    expect(resposta.body.erro.campos.estoqueMinimo).toBe('Informe a quantidade')
+  })
+
+  it('aponta categoria e preco vazios com mensagem clara', async () => {
+    const cliente = await logar()
+
+    const resposta = await criarViaApi(cliente, {
+      nome: 'Produto Incompleto',
+      categoriaId: null,
+      precoVenda: null,
+      estoqueInicial: 0,
+      estoqueMinimo: 0,
+    })
+
+    expect(resposta.status).toBe(422)
+    expect(resposta.body.erro.campos.categoriaId).toBe('Selecione uma categoria')
+    expect(resposta.body.erro.campos.precoVenda).toBe('Informe o preço')
   })
 
   it('recusa listar produtos sem sessao com 401', async () => {
@@ -562,6 +606,8 @@ describe.skipIf(!temBanco())('/api/produtos', () => {
       nome: 'Brinquedo Corda Resistente',
       categoriaId: categoriaHigiene,
       precoVenda: 20,
+      estoqueInicial: 0,
+      estoqueMinimo: 0,
     })
 
     const resposta = await gestor.post(`/api/produtos/${id}/reativar`)

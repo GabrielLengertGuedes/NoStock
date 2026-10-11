@@ -8,6 +8,7 @@ import { EstadoVazio } from '../components/EstadoVazio.jsx'
 import { KpiCard } from '../components/KpiCard.jsx'
 import { Layout } from '../components/Layout.jsx'
 import { Tabela } from '../components/Tabela.jsx'
+import { TelefoneFornecedor } from '../components/TelefoneFornecedor.jsx'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
 
 const ABAS_STATUS = [
@@ -142,7 +143,7 @@ export function Reposicao() {
                   <div className="catalogo-contato">
                     <span>{grupo.fornecedor.contatoNome || 'Sem contato cadastrado'}</span>
                     {grupo.fornecedor.telefone ? (
-                      <a href={`tel:${grupo.fornecedor.telefone}`}>{grupo.fornecedor.telefone}</a>
+                      <TelefoneFornecedor nome={grupo.fornecedor.nome} telefone={grupo.fornecedor.telefone} />
                     ) : null}
                     {grupo.fornecedor.email ? (
                       <a href={`mailto:${grupo.fornecedor.email}`}>{grupo.fornecedor.email}</a>

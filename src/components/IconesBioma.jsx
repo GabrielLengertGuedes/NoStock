@@ -62,6 +62,20 @@ export function IconeFornecedores(props) {
   )
 }
 
+/** Balão do WhatsApp: contorno no traço padrão, fone preenchido para ler em 18px. */
+export function IconeWhatsapp(props) {
+  return (
+    <Svg {...props}>
+      <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+      <path
+        fill="currentColor"
+        stroke="none"
+        d="M9.2 7.6c-.5 0-1 .2-1.3.6-.5.6-.8 1.4-.6 2.3.3 1.3 1.1 2.6 2.3 3.8 1.2 1.2 2.6 2 3.9 2.3.9.2 1.7-.1 2.3-.6.4-.4.6-.8.6-1.3 0-.2-.1-.4-.3-.5l-1.6-.8c-.2-.1-.5-.1-.7.1l-.6.7c-.1.2-.4.2-.6.1-.7-.3-1.3-.8-1.8-1.3s-1-1.1-1.3-1.8c-.1-.2 0-.4.1-.6l.6-.6c.2-.2.2-.5.1-.7l-.8-1.6c-.1-.2-.3-.3-.5-.3z"
+      />
+    </Svg>
+  )
+}
+
 export function IconeMovimentacoes(props) {
   return (
     <Svg {...props}>

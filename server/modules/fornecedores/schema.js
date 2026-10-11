@@ -65,12 +65,23 @@ const contato_nome = z
   .nullish()
   .transform((valor) => valor || null)
 
+// Guardado so com digitos (DDD + numero), como o CNPJ. O 55 de quem cola
+// o numero com codigo do pais sai aqui; o link do WhatsApp poe de volta.
+function digitosDoTelefone(valor) {
+  const digitos = valor.replace(/\D+/g, '')
+  const comPais = (digitos.length === 12 || digitos.length === 13) && digitos.startsWith('55')
+  return comPais ? digitos.slice(2) : digitos
+}
+
 const telefone = z
   .string()
   .trim()
-  .max(20, 'No máximo 20 caracteres')
+  .refine(
+    (v) => v === '' || [10, 11].includes(digitosDoTelefone(v).length),
+    'Informe o telefone com DDD',
+  )
+  .transform((v) => digitosDoTelefone(v) || null)
   .nullish()
-  .transform((valor) => valor || null)
 
 const email = z
   .string()
@@ -88,20 +99,27 @@ const observacao = z
   .nullish()
   .transform((valor) => valor || null)
 
-export const corpoDeCriacao = z.object({
-  nome,
-  cnpj,
-  contato_nome,
-  telefone,
-  email,
-  observacao,
-})
+// Fornecedor sem nenhum canal deixa a sugestao de compra (RF13) sem ter para
+// quem ligar: telefone ou e-mail, ao menos um.
+function exigirTelefoneOuEmail(dados, ctx) {
+  if (dados.telefone || dados.email) return
 
-export const corpoDeAtualizacao = z.object({
-  nome,
-  cnpj,
-  contato_nome,
-  telefone,
-  email,
-  observacao,
-})
+  for (const campo of ['telefone', 'email']) {
+    ctx.addIssue({ code: 'custom', path: [campo], message: 'Informe um telefone ou um e-mail' })
+  }
+}
+
+const corpo = z
+  .object({
+    nome,
+    cnpj,
+    contato_nome,
+    telefone,
+    email,
+    observacao,
+  })
+  .superRefine(exigirTelefoneOuEmail)
+
+export const corpoDeCriacao = corpo
+
+export const corpoDeAtualizacao = corpo

@@ -14,8 +14,10 @@ import { Layout } from '../components/Layout.jsx'
 import { MenuAcoes } from '../components/MenuAcoes.jsx'
 import { Modal } from '../components/Modal.jsx'
 import { ProdutoThumb } from '../components/ProdutoThumb.jsx'
+import { TelefoneFornecedor } from '../components/TelefoneFornecedor.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
+import { formatarTelefone } from '../lib/telefone.js'
 
 const VAZIA = { nome: '', cnpj: '', contato_nome: '', telefone: '', email: '', observacao: '' }
 
@@ -51,7 +53,7 @@ export function Fornecedores() {
             nome: fornecedor.nome,
             cnpj: fornecedor.cnpj ?? '',
             contato_nome: fornecedor.contato_nome ?? '',
-            telefone: fornecedor.telefone ?? '',
+            telefone: formatarTelefone(fornecedor.telefone),
             email: fornecedor.email ?? '',
             observacao: fornecedor.observacao ?? '',
           }
@@ -163,7 +165,7 @@ export function Fornecedores() {
               <div className="catalogo-contato">
                 <span>{fornecedor.contato_nome || 'Sem contato'}</span>
                 {fornecedor.telefone ? (
-                  <a href={`tel:${fornecedor.telefone}`}>{fornecedor.telefone}</a>
+                  <TelefoneFornecedor nome={fornecedor.nome} telefone={fornecedor.telefone} />
                 ) : (
                   <span>—</span>
                 )}
@@ -234,7 +236,8 @@ export function Fornecedores() {
           <Campo
             id="fornecedor-telefone"
             rotulo="Telefone"
-            ajuda="Opcional."
+            type="tel"
+            ajuda="Com DDD. Informe telefone, e-mail ou os dois."
             value={formulario.telefone}
             onChange={(e) => setFormulario({ ...formulario, telefone: e.target.value })}
             erro={erroDoServidor?.campos?.telefone}
@@ -242,7 +245,8 @@ export function Fornecedores() {
           <Campo
             id="fornecedor-email"
             rotulo="E-mail"
-            ajuda="Opcional."
+            type="email"
+            ajuda="Informe telefone, e-mail ou os dois."
             value={formulario.email}
             onChange={(e) => setFormulario({ ...formulario, email: e.target.value })}
             erro={erroDoServidor?.campos?.email}

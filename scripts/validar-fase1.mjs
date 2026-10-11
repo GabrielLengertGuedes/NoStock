@@ -78,6 +78,7 @@ async function main() {
     const forn = await gestor.post('/api/fornecedores').send({
       nome: `${PREFIXO} Distribuidora`,
       cnpj: '19.980.203/0001-10',
+      telefone: '(47) 99999-8888',
     })
     if (forn.status === 201) ok('RF14', 'Gestor cria fornecedor com CNPJ')
     else falha('RF14', 'Gestor cria fornecedor', JSON.stringify(forn.body))

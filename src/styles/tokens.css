@@ -25,6 +25,9 @@
   --warm-lime: #d2ebb6;
   --warm-leaf: #d2ebb6;
 
+  /* Verde-azulado da marca WhatsApp: o #25d366 não passa 3:1 sobre branco. */
+  --whatsapp: #128c7e;
+
   --white: #ffffff;
   --cream: #fbf9f4;
   --sand: #f5f3ee;
