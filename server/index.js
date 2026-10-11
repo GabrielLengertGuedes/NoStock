@@ -1,6 +1,6 @@
 import { criarApp } from './app.js'
 import { obterEnv } from './config/env.js'
-import { bancoResponde, fecharPool } from './db/pool.js'
+import { bancoResponde, fecharPool, sslDoBanco } from './db/pool.js'
 
 let env
 try {
@@ -12,6 +12,11 @@ try {
 
 const servidor = criarApp().listen(env.porta, async () => {
   console.log(`API em http://localhost:${env.porta} (${env.nodeEnv})`)
+  if (env.producao && !env.databaseCaCert && sslDoBanco(env.databaseUrl)) {
+    console.warn(
+      'DATABASE_CA_CERT não definida: a conexão com o banco é cifrada, mas o certificado não é validado.',
+    )
+  }
   console.log(
     (await bancoResponde())
       ? 'Banco conectado.'

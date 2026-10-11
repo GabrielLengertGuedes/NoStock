@@ -4,6 +4,9 @@ const DEFINICOES = {
   NODE_ENV: { padrao: 'development' },
   PORT: { padrao: '3001', numero: true },
   DATABASE_URL: { obrigatoria: true },
+  // Opcional. Certificado da CA do Supabase (o PEM ou o caminho do arquivo):
+  // com ele a conexao valida o certificado do banco, sem ele so cifra.
+  DATABASE_CA_CERT: { opcional: true },
   SESSION_SECRET: { obrigatoria: true },
   SESSION_MAX_AGE_HOURS: { padrao: '8', numero: true },
   CORS_ORIGIN: { padrao: 'http://localhost:5173' },
@@ -28,6 +31,10 @@ export function lerEnv(fonte = process.env) {
   for (const [nome, definicao] of Object.entries(DEFINICOES)) {
     const valor = fonte[nome]?.trim() || definicao.padrao
 
+    if (!valor && definicao.opcional) {
+      bruto[nome] = null
+      continue
+    }
     if (!valor) {
       ausentes.push(nome)
       continue
@@ -54,6 +61,7 @@ export function lerEnv(fonte = process.env) {
     nodeEnv: bruto.NODE_ENV,
     porta: bruto.PORT,
     databaseUrl: bruto.DATABASE_URL,
+    databaseCaCert: bruto.DATABASE_CA_CERT,
     sessionSecret: bruto.SESSION_SECRET,
     sessionMaxAgeHoras: bruto.SESSION_MAX_AGE_HOURS,
     corsOrigin: bruto.CORS_ORIGIN,
