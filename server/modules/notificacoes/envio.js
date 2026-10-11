@@ -31,8 +31,8 @@ export async function enviar(inscricao, alerta) {
         },
         TTL: VALIDADE_SEGUNDOS,
         urgency: 'high',
-        // Alerta do mesmo produto ainda nao entregue e trocado pelo novo no servico de push.
-        topic: alerta.tag,
+        // Sem o cabecalho Topic: o servico de push da Apple recusa com
+        // BadWebPushTopic. Quem junta os alertas do mesmo produto e o tag, no aparelho.
         timeout: 10_000,
       },
     )

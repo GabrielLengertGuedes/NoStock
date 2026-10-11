@@ -36,9 +36,24 @@
 
 /* ── topo */
 
+/*
+ * No app instalado no iPhone, o sistema desfoca uma faixa logo abaixo do relógio.
+ * O topo desce 16px além da área do relógio para o título ficar fora dela; sem
+ * área de relógio (Android, computador), o min() zera e nada muda.
+ */
 .movel-topo {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+  padding-top: calc(16px + env(safe-area-inset-top, 0px) + min(env(safe-area-inset-top, 0px), 16px));
   padding-bottom: 12px;
+}
+
+/* Faixa sólida atrás do relógio e da bateria: o que rola para cima some por baixo dela. */
+.movel::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 40;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--cream);
 }
 
 .movel-topo-linha {

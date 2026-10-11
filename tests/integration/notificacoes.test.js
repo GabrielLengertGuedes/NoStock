@@ -204,7 +204,8 @@ describe.skipIf(!temBanco())('/api/notificacoes e os alertas de estoque', () => 
         url: `/m/produtos/${produtoId}`,
         tag: `produto-${produtoId}`,
       })
-      expect(webpush.sendNotification.mock.calls[0][2]).toMatchObject({ topic: `produto-${produtoId}` })
+      // O iPhone recusa o alerta inteiro (BadWebPushTopic) quando ele vem com Topic.
+      expect(webpush.sendNotification.mock.calls[0][2]).not.toHaveProperty('topic')
     })
 
     it('zerar o produto avisa também quem só quer saber quando acaba', async () => {
