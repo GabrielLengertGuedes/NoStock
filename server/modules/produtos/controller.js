@@ -5,6 +5,10 @@ export async function listar(req, res) {
   res.json(await servico.listar(req.validado.query))
 }
 
+export async function buscarPorId(req, res) {
+  res.json({ dados: await servico.buscarPorId(req.validado.params.id) })
+}
+
 export async function criar(req, res) {
   const produto = await servico.criar({
     ...req.validado.body,

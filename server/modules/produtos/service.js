@@ -30,6 +30,13 @@ export async function listar(filtros) {
   }
 }
 
+// Devolve tambem produto inativo: a tela de edicao abre um produto que saiu do catalogo.
+export async function buscarPorId(id) {
+  const produto = await repositorio.buscarDetalhe(id)
+  if (!produto) throw naoEncontrado()
+  return produto
+}
+
 export async function criar({ usuarioId, confirmarNomeDuplicado, ...dados }) {
   await recusarSeNomeDuplicado(dados.nome, { confirmarNomeDuplicado })
 

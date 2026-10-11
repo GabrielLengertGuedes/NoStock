@@ -17,6 +17,7 @@ rotas.get(
   validate({ params: parametroId, query: filtrosDeMovimentacoes }),
   controlador.listarMovimentacoes,
 )
+rotas.get('/:id', requireAuth, validate({ params: parametroId }), controlador.buscarPorId)
 rotas.post('/', requireAuth, validate({ body: corpoDeCriacao }), controlador.criar)
 rotas.put(
   '/:id',

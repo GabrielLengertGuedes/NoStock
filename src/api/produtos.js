@@ -1,4 +1,10 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 
 import { api } from './client.js'
 
@@ -15,33 +21,29 @@ export function useProdutos(filtros, { enabled = true } = {}) {
   })
 }
 
-/** Carrega um produto pela listagem (não há GET /produtos/:id no contrato atual). */
+function proximaPagina({ meta }) {
+  return meta.pagina < meta.totalPaginas ? meta.pagina + 1 : undefined
+}
+
+/** Lista que cresce com "carregar mais", para a rolagem do celular. */
+export function useProdutosEmRolagem(filtros) {
+  return useInfiniteQuery({
+    queryKey: [...CHAVE, 'rolagem', filtros],
+    queryFn: ({ pageParam }) => api.get('/produtos', { params: { ...filtros, pagina: pageParam } }),
+    initialPageParam: 1,
+    getNextPageParam: proximaPagina,
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** Um produto, ativo ou não, com o contato do fornecedor. */
 export function useProduto(id) {
   const habilitado = id != null && String(id).length > 0
 
   return useQuery({
-    queryKey: [...CHAVE, 'detalhe', id],
+    queryKey: [...CHAVE, 'detalhe', String(id)],
     enabled: habilitado,
-    queryFn: async () => {
-      const alvo = Number(id)
-      let pagina = 1
-      let totalPaginas = 1
-
-      while (pagina <= totalPaginas) {
-        const resposta = await api.get('/produtos', {
-          params: { pagina, porPagina: 100, ativo: 'todos' },
-        })
-        const produto = (resposta.dados ?? []).find((item) => item.id === alvo)
-        if (produto) return produto
-        totalPaginas = resposta.meta?.totalPaginas ?? 1
-        pagina += 1
-        if (pagina > 20) break
-      }
-
-      const erro = new Error('Produto não encontrado.')
-      erro.mensagem = 'Produto não encontrado.'
-      throw erro
-    },
+    queryFn: async () => (await api.get(`/produtos/${id}`)).dados,
   })
 }
 

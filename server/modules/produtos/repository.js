@@ -14,17 +14,26 @@ const COLUNA_DE_ORDENACAO = {
 // tarde) atualizacao. Um so lugar decide o formato do objeto "produto" da API.
 // O cast para float8 evita que o driver devolva preco_venda como string: sem ele
 // o front receberia "189.90" (numeric vira string no pg) em vez do numero 189.90.
-const SELECAO = `
+function selecao(fornecedor) {
+  return `
   p.id, p.nome, p.descricao,
   jsonb_build_object('id', c.id, 'nome', c.nome) as categoria,
-  case when f.id is null then null
-       else jsonb_build_object('id', f.id, 'nome', f.nome) end as fornecedor,
+  case when f.id is null then null else ${fornecedor} end as fornecedor,
   p.preco_venda::float8 as "precoVenda",
   p.quantidade_atual as "quantidadeAtual",
   p.estoque_minimo as "estoqueMinimo",
   ${STATUS_SQL} as "statusEstoque",
   p.ativo
 `
+}
+
+const SELECAO = selecao(`jsonb_build_object('id', f.id, 'nome', f.nome)`)
+
+// O detalhe traz tambem o contato do fornecedor: na tela do produto, no
+// celular, ligar ou chamar no WhatsApp e o proximo passo de quem viu que acabou.
+const SELECAO_DETALHE = selecao(`jsonb_build_object(
+    'id', f.id, 'nome', f.nome, 'contatoNome', f.contato_nome,
+    'telefone', f.telefone, 'email', f.email)`)
 
 const JUNCOES = `
   from public.produtos p
@@ -97,6 +106,14 @@ export async function listar(filtros, conexao = obterPool()) {
 export async function buscarPorId(id, conexao = obterPool()) {
   const { rows } = await conexao.query(
     `select ${SELECAO} ${JUNCOES} where p.id = $1`,
+    [id],
+  )
+  return rows[0] ?? null
+}
+
+export async function buscarDetalhe(id, conexao = obterPool()) {
+  const { rows } = await conexao.query(
+    `select ${SELECAO_DETALHE} ${JUNCOES} where p.id = $1`,
     [id],
   )
   return rows[0] ?? null
