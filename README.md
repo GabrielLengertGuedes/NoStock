@@ -121,6 +121,33 @@ banco entra como arquivo novo em `db/migrations/`, aplicado à mão e avisado no
 
 ---
 
+## Versão para celular e alertas push
+
+A versão para celular fica em `/m`: Início, Estoque, Produto, Histórico, Repor (só gestor) e
+Conta. É um PWA: no celular, o navegador oferece instalar, e o ícone abre direto em `/m`.
+Cadastros, usuários e relatórios continuam só na versão completa.
+
+Os alertas avisam quando uma saída piora o status de um produto (abaixo do mínimo, crítico ou
+sem estoque). Eles só funcionam com as três variáveis `VAPID_*` no `.env`. Sem elas, a API sobe
+normalmente e só os alertas ficam desligados:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Cole a chave pública em `VAPID_PUBLIC_KEY`, a privada em `VAPID_PRIVATE_KEY`, e um contato em
+`VAPID_SUBJECT` (`mailto:alguem@dominio`). A privada é segredo, como a `DATABASE_URL`.
+
+- **Para testar no computador**, o `localhost` basta: abra `http://localhost:5173/m`, vá em Conta
+  e ative os alertas.
+- **Para testar no celular**, é preciso HTTPS. Use o endereço publicado ou um túnel HTTPS para a
+  porta 5173; pelo IP da rede local o navegador não libera o push.
+- **No iPhone**, o alerta só chega com o app adicionado à Tela de Início (iOS 16.4 ou mais novo).
+- **Os testes nunca mandam alerta de verdade**: o `tests/setup.js` apaga as chaves VAPID, porque o
+  banco de desenvolvimento é compartilhado e pode ter celulares da equipe inscritos.
+
+---
+
 ## Quando algo dá errado
 
 ### `node: command not found`, ou `node -v` mostra uma versão menor que 20
