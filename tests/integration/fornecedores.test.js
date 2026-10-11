@@ -245,4 +245,14 @@ describe.skipIf(!temBanco())('/api/fornecedores', () => {
     expect(deNovo.status).toBe(400)
     expect(deNovo.body.erro.codigo).toBe('REGRA_NEGOCIO')
   })
+
+  it('nao reativa fornecedor cujo nome ja foi reusado por outro ativo', async () => {
+    const { body } = await criar({ nome: NOME })
+    await cliente.delete(`/api/fornecedores/${body.dados.id}`)
+    expect((await criar({ nome: NOME })).status).toBe(201)
+
+    const resposta = await cliente.post(`/api/fornecedores/${body.dados.id}/reativar`)
+    expect(resposta.status).toBe(409)
+    expect(resposta.body.erro.codigo).toBe('CONFLITO')
+  })
 })
