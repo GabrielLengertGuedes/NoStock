@@ -6,6 +6,9 @@ function digitos(telefone) {
   return comPais ? numero.slice(2) : numero
 }
 
+/** O telefone so conta digitos; o resto e separador da mascara. */
+export const CARACTERE_TELEFONE = /\d/
+
 /**
  * Formata enquanto a pessoa digita: (47) 99999-8888 ou (47) 3333-4444.
  * Nunca termina em separador, senao o backspace apagaria o separador e a

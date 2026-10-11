@@ -164,6 +164,20 @@ describe.skipIf(!temBanco())('/api/fornecedores', () => {
     expect(resposta.body.erro.campos.cnpj).toBeDefined()
   })
 
+  it('aceita o CNPJ alfanumerico e guarda em maiuscula', async () => {
+    const resposta = await criar({ nome: NOME, cnpj: '12.abc.345/01de-35' })
+
+    expect(resposta.status).toBe(201)
+    expect(resposta.body.dados.cnpj).toBe('12ABC34501DE35')
+  })
+
+  it('recusa CNPJ alfanumerico com digito verificador errado com 422', async () => {
+    const resposta = await criar({ nome: NOME, cnpj: '12.ABC.345/01DE-36' })
+
+    expect(resposta.status).toBe(422)
+    expect(resposta.body.erro.campos.cnpj).toBe('CNPJ inválido')
+  })
+
   it('permite criar multiplos fornecedores sem CNPJ', async () => {
     const r1 = await criar({ nome: 'Um' })
     const r2 = await criar({ nome: 'Dois', cnpj: '' })

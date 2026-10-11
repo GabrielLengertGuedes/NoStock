@@ -21,6 +21,12 @@ describe('mascararCnpj', () => {
     expect(mascararCnpj('19.980.203/0001-109')).toBe('19.980.203/0001-10')
   })
 
+  it('aceita o CNPJ alfanumérico, em maiúscula, com verificadores numéricos', () => {
+    expect(mascararCnpj('12abc34501de35')).toBe('12.ABC.345/01DE-35')
+    // letra nas duas últimas posições não entra
+    expect(mascararCnpj('12ABC34501DEX5')).toBe('12.ABC.345/01DE-5')
+  })
+
   it('devolve vazio para cadastro sem CNPJ', () => {
     expect(mascararCnpj(null)).toBe('')
   })
