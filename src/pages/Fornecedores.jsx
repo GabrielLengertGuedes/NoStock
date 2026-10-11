@@ -17,15 +17,10 @@ import { ProdutoThumb } from '../components/ProdutoThumb.jsx'
 import { TelefoneFornecedor } from '../components/TelefoneFornecedor.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
-import { formatarTelefone } from '../lib/telefone.js'
+import { mascararCnpj } from '../lib/cnpj.js'
+import { formatarTelefone, mascararTelefone } from '../lib/telefone.js'
 
 const VAZIA = { nome: '', cnpj: '', contato_nome: '', telefone: '', email: '', observacao: '' }
-
-// Função utilitária para aplicar máscara no CNPJ para exibição
-function formatarCnpj(cnpj) {
-  if (!cnpj) return '—'
-  return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
-}
 
 export function Fornecedores() {
   const { temPapel } = useAuth()
@@ -51,7 +46,7 @@ export function Fornecedores() {
       fornecedor
         ? {
             nome: fornecedor.nome,
-            cnpj: fornecedor.cnpj ?? '',
+            cnpj: mascararCnpj(fornecedor.cnpj),
             contato_nome: fornecedor.contato_nome ?? '',
             telefone: formatarTelefone(fornecedor.telefone),
             email: fornecedor.email ?? '',
@@ -161,7 +156,7 @@ export function Fornecedores() {
                 ) : null}
               </div>
               <h3>{fornecedor.nome}</h3>
-              <p className="sku-codigo">{formatarCnpj(fornecedor.cnpj)}</p>
+              <p className="sku-codigo">{mascararCnpj(fornecedor.cnpj) || '—'}</p>
               <div className="catalogo-contato">
                 <span>{fornecedor.contato_nome || 'Sem contato'}</span>
                 {fornecedor.telefone ? (
@@ -219,8 +214,10 @@ export function Fornecedores() {
             id="fornecedor-cnpj"
             rotulo="CNPJ"
             ajuda="Opcional."
+            inputMode="numeric"
+            placeholder="00.000.000/0000-00"
             value={formulario.cnpj}
-            onChange={(e) => setFormulario({ ...formulario, cnpj: e.target.value })}
+            onChange={(e) => setFormulario({ ...formulario, cnpj: mascararCnpj(e.target.value) })}
             erro={erroDoServidor?.campos?.cnpj}
           />
           <Campo
@@ -238,8 +235,9 @@ export function Fornecedores() {
             rotulo="Telefone"
             type="tel"
             ajuda="Com DDD. Informe telefone, e-mail ou os dois."
+            placeholder="(47) 99999-8888"
             value={formulario.telefone}
-            onChange={(e) => setFormulario({ ...formulario, telefone: e.target.value })}
+            onChange={(e) => setFormulario({ ...formulario, telefone: mascararTelefone(e.target.value) })}
             erro={erroDoServidor?.campos?.telefone}
           />
           <Campo
