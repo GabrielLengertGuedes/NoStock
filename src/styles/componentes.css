@@ -384,8 +384,8 @@
 }
 
 /* ═══════════ Toasts (avisos rápidos) ═══════════ */
-/* Acima do login de bloqueio (z-index 50), que também pode disparar aviso.
-   Abaixo da altura da topbar, para não cobrir o sino nem o avatar. */
+/* Acima do conteúdo e abaixo da altura da topbar, para não cobrir o sino nem o
+   avatar. Modais e o login de bloqueio são <dialog> na camada do topo. */
 .toasts {
   position: fixed;
   top: calc(var(--topbar-height) + 12px);
@@ -469,24 +469,6 @@
   }
 }
 
-.layout-topbar-usuario {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-left: 8px;
-}
-
-.layout-topbar-nome {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--dark);
-}
-
-.layout-topbar-papel {
-  font-size: 11px;
-  color: var(--gray);
-}
-
 .layout-conteudo {
   padding: var(--content-pad-y) var(--content-pad-x);
   width: 100%;
@@ -567,6 +549,12 @@
 }
 
 /* Arte sem texto (o texto é HTML, abaixo): recorta pelo topo para manter as cabeças. */
+/* Fora do fluxo, como a foto: senao o <picture> vira item do flex e desloca o texto. */
+.login-hero-midia {
+  position: absolute;
+  inset: 0;
+}
+
 .login-hero-foto {
   position: absolute;
   inset: 0;
@@ -815,26 +803,6 @@
   text-decoration: underline;
 }
 
-.login-check {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: var(--slate);
-  cursor: pointer;
-}
-
-.login-check input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--primary-dark);
-}
-
-.login-check-nota {
-  margin-top: -8px;
-  color: var(--gray);
-}
-
 .login-aviso {
   display: flex;
   align-items: flex-start;
@@ -905,15 +873,28 @@
   }
 }
 
+/* <dialog> modal ocupando a tela: zera o tamanho, a borda e a margem que o
+   navegador da ao dialog. So vira grid quando aberto, senao apareceria antes
+   do showModal(). */
 .login-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
   background: rgba(15, 23, 42, 0.45);
-  display: grid;
-  place-items: center;
   padding: 24px;
   overflow-y: auto;
+}
+
+.login-overlay[open] {
+  display: grid;
+  place-items: center;
+}
+
+.login-overlay::backdrop {
+  background: transparent;
 }
 
 /* margin: auto centraliza, mas em tela baixa alinha ao topo em vez de cortar o cartão. */
@@ -1130,11 +1111,6 @@
   font-size: 22px;
 }
 
-.produto-thumb-warm {
-  background: var(--warm-peach);
-  color: var(--warm-terra);
-}
-
 .menu-acoes {
   position: relative;
   display: inline-flex;
@@ -1270,25 +1246,6 @@
 
 .dashboard-grid-baixo > .insight-card {
   flex: 1 1 280px;
-}
-
-.alerta-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--stone);
-  border-radius: 12px;
-  background: var(--cream);
-}
-
-.alerta-item + .alerta-item {
-  margin-top: 10px;
-}
-
-.alerta-item-critico {
-  border-left: 3px solid var(--warm-terra);
 }
 
 .insight-card {
@@ -1573,9 +1530,14 @@ textarea.input-field {
   justify-content: center;
 }
 
-.modal-fechar:hover {
+.modal-fechar:hover:not(:disabled) {
   background: var(--sand);
   color: var(--primary-dark);
+}
+
+.modal-fechar:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .modal-corpo {
@@ -1948,13 +1910,6 @@ textarea.input-field {
   color: var(--primary-dark);
 }
 
-@media (max-width: 900px) {
-  .produto-form-grid,
-  .produto-form-duas-colunas {
-    grid-template-columns: 1fr;
-  }
-}
-
 .estado-vazio {
   display: flex;
   flex-direction: column;
@@ -1979,18 +1934,6 @@ textarea.input-field {
 .paginacao .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-.page-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: flex-end;
-  margin-bottom: 16px;
-  padding: 14px;
-  background: var(--white);
-  border: 1px solid var(--stone);
-  border-radius: 12px;
 }
 
 .filtros-bioma {
@@ -2106,6 +2049,11 @@ textarea.input-field {
   .kpi-grid-2 {
     grid-template-columns: 1fr;
   }
+
+  .produto-form-grid,
+  .produto-form-duas-colunas {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 560px) {
@@ -2165,4 +2113,26 @@ textarea.input-field {
     box-shadow: none;
     border: none;
   }
+}
+
+/* ═══════════ Inativos (categorias, fornecedores) ═══════════ */
+.inativos-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.inativos-lista li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  color: var(--slate);
+}
+
+.inativos-lista li + li {
+  border-top: 1px solid var(--stone);
 }

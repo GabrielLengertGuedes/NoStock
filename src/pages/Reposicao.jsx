@@ -103,27 +103,26 @@ export function Reposicao() {
         <KpiCard
           tom={totalItens > 0 ? 'urgente' : 'mint'}
           rotulo="Itens a repor"
-          valor={consulta.isPending ? '—' : totalItens}
+          valor={consulta.isSuccess ? totalItens : '—'}
           meta="No filtro atual"
         />
         <KpiCard
           tom="neutro"
           rotulo="Fornecedores envolvidos"
-          valor={consulta.isPending ? '—' : grupos.filter((g) => g.fornecedor !== null).length}
+          valor={consulta.isSuccess ? grupos.filter((g) => g.fornecedor !== null).length : '—'}
           meta="Com item a repor"
         />
       </section>
-
-      {consulta.isError && (
-        <p className="campo-erro text-body" role="alert">
-          {consulta.error.mensagem}
-        </p>
-      )}
 
       {consulta.isPending ? (
         <p className="text-body" style={{ color: 'var(--gray)' }}>
           Carregando sugestão de compra…
         </p>
+      ) : consulta.isError ? (
+        // Falha nao pode cair no "Estoque em dia" logo abaixo.
+        <div role="alert">
+          <EstadoVazio titulo="Não foi possível carregar a sugestão de compra" descricao={consulta.error.mensagem} />
+        </div>
       ) : totalItens === 0 ? (
         <EstadoVazio
           titulo="Estoque em dia"

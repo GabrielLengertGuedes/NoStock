@@ -16,6 +16,7 @@ import { Tabela } from '../components/Tabela.jsx'
 import { useAoPararDeDigitar } from '../hooks/useAoPararDeDigitar.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
+import { instante } from '../lib/formatos.js'
 import { skuDoProduto } from '../lib/sku.js'
 
 const TIPOS = [
@@ -53,16 +54,6 @@ function formatar(formatador, valor) {
   if (!valor) return '—'
   const data = new Date(valor)
   return Number.isNaN(data.getTime()) ? '—' : formatador.format(data)
-}
-
-// O usuario escolhe o dia; o periodo vai fechado, do primeiro ao ultimo instante
-// dele, senao o proprio dia final ficaria de fora. O instante e resolvido aqui,
-// no fuso de quem esta na loja, e viaja em UTC — o fuso do servidor nao desloca
-// a borda do dia.
-function instante(dia, hora) {
-  if (!dia) return undefined
-  const data = new Date(`${dia}T${hora}`)
-  return Number.isNaN(data.getTime()) ? undefined : data.toISOString()
 }
 
 // O filtro por funcionario depende de GET /usuarios, restrito a gestor (RN10).
@@ -232,7 +223,7 @@ export function Movimentacoes() {
           Icone={IconeAlerta}
           rotulo="Saídas"
           valor={totaisSaida.data?.meta?.total ?? 0}
-          meta="Vendas, descarte e devolução"
+          meta="Vendas e descarte"
         />
         <KpiCard
           tom="neutro"
@@ -330,17 +321,12 @@ export function Movimentacoes() {
         </div>
       </section>
 
-      {consulta.isError && (
-        <p className="campo-erro text-body" role="alert">
-          {consulta.error.mensagem}
-        </p>
-      )}
-
       <section className="painel">
       <Tabela
         colunas={colunas}
         dados={movimentacoes}
         carregando={consulta.isPending}
+        erro={consulta.error}
         vazio={
           <EstadoVazio
             titulo="Nenhuma movimentação encontrada"

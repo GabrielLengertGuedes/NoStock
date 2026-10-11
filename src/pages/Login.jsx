@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 
 import { ErroApi } from '../api/client.js'
@@ -24,6 +24,43 @@ function avisoDeFalha(falha) {
   }
 }
 
+// O login de bloqueio abre como <dialog> modal: fica na camada do topo, acima
+// de qualquer modal que estivesse aberto quando a sessao caiu (antes ele ficava
+// por baixo, sem receber clique), e prende o foco. ESC nao fecha: entrar de
+// novo e o unico caminho. O Chrome deixa um segundo ESC seguido fechar mesmo
+// com o cancel barrado; por isso o onClose reabre enquanto ele estiver montado.
+function DialogoDeBloqueio({ children }) {
+  const referencia = useRef(null)
+  const montado = useRef(false)
+
+  useEffect(() => {
+    const dialogo = referencia.current
+    montado.current = true
+    if (dialogo && !dialogo.open) dialogo.showModal()
+    return () => {
+      montado.current = false
+      if (dialogo?.open) dialogo.close()
+    }
+  }, [])
+
+  function reabrir() {
+    const dialogo = referencia.current
+    if (montado.current && dialogo?.isConnected && !dialogo.open) dialogo.showModal()
+  }
+
+  return (
+    <dialog
+      ref={referencia}
+      className="login-overlay"
+      aria-label="Sessão expirada"
+      onCancel={(evento) => evento.preventDefault()}
+      onClose={reabrir}
+    >
+      {children}
+    </dialog>
+  )
+}
+
 export function Login({ modo = 'pagina' }) {
   const { autenticado, login, avisoSessao, limparAvisoSessao, loginExigido } = useAuth()
   const toast = useToast()
@@ -41,7 +78,6 @@ export function Login({ modo = 'pagina' }) {
   const [avisoLocal, setAvisoLocal] = useState(null)
   const [enviando, setEnviando] = useState(false)
   const [mostrarSenha, setMostrarSenha] = useState(false)
-  const [manterConectado, setManterConectado] = useState(false)
 
   if (autenticado && modo === 'pagina' && !loginExigido) {
     return <Navigate to={destino} replace />
@@ -222,21 +258,6 @@ export function Login({ modo = 'pagina' }) {
           ) : null}
         </div>
 
-        <label className="login-check">
-          <input
-            type="checkbox"
-            checked={manterConectado}
-            onChange={(e) => setManterConectado(e.target.checked)}
-          />
-          <span>Manter conectado por 30 dias</span>
-        </label>
-        {manterConectado && (
-          <p className="login-check-nota text-body-sm">
-            A sessão do sistema dura 8 horas por política de segurança. O gestor pode renovar o
-            acesso ao entrar de novo.
-          </p>
-        )}
-
         <button
           type="submit"
           className={`btn btn-primary login-submit${enviando ? ' btn-carregando' : ''}`}
@@ -253,11 +274,11 @@ export function Login({ modo = 'pagina' }) {
 
   if (modo === 'bloqueio') {
     return (
-      <div className="login-overlay">
+      <DialogoDeBloqueio>
         <div className="login login-bloqueio">
           <div className="login-cartao">{formulario}</div>
         </div>
-      </div>
+      </DialogoDeBloqueio>
     )
   }
 
@@ -266,11 +287,19 @@ export function Login({ modo = 'pagina' }) {
       <div className="login-shell">
         <div className="login-painel">
           <section className="login-hero" aria-label="Bioma PetShop">
-            <img
-              className="login-hero-foto"
-              src="/brand/login-hero.webp"
-              alt="Cachorro e gato da Bioma PetShop"
-            />
+            <picture className="login-hero-midia">
+              {/* Abaixo de 900px o hero some (display:none), mas um <img> seria
+                  baixado mesmo assim: no celular a fonte vira um GIF de 1x1. */}
+              <source
+                media="(max-width: 900px)"
+                srcSet="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+              />
+              <img
+                className="login-hero-foto"
+                src="/brand/login-hero.webp"
+                alt="Cachorro e gato da Bioma PetShop"
+              />
+            </picture>
             <div className="login-hero-conteudo">
               <p className="login-hero-badge">
                 <img src="/brand/icon-leaf.svg" alt="" width={12} height={12} aria-hidden="true" />
