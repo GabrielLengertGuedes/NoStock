@@ -39,7 +39,18 @@ self.addEventListener('push', (evento) => {
   }
 
   evento.waitUntil(
-    self.registration.showNotification(alerta.titulo, {
+    Promise.all([
+      mostrar(alerta),
+      // Tela aberta não se atualiza sozinha: avisa para ela buscar os números de novo.
+      self.clients
+        .matchAll({ type: 'window', includeUncontrolled: true })
+        .then((janelas) => janelas.forEach((janela) => janela.postMessage({ tipo: 'estoque-mudou' }))),
+    ]),
+  )
+})
+
+function mostrar(alerta) {
+  return self.registration.showNotification(alerta.titulo, {
       body: alerta.corpo,
       tag: alerta.tag,
       // Com a mesma tag, o alerta novo substitui o anterior; renotify faz ele tocar de novo.
@@ -48,9 +59,8 @@ self.addEventListener('push', (evento) => {
       badge: '/icons/badge-96.png',
       lang: 'pt-BR',
       data: { url: alerta.url || '/m' },
-    }),
-  )
-})
+  })
+}
 
 self.addEventListener('notificationclick', (evento) => {
   evento.notification.close()

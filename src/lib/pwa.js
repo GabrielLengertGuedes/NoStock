@@ -10,6 +10,18 @@ export function registrarServiceWorker() {
   })
 }
 
+/**
+ * Chama `aoMudar` quando chega um alerta de estoque com o app aberto: o service
+ * worker avisa a página, que busca os números de novo.
+ */
+export function ouvirMudancasDeEstoque(aoMudar) {
+  if (!('serviceWorker' in navigator)) return
+
+  navigator.serviceWorker.addEventListener('message', (evento) => {
+    if (evento.data?.tipo === 'estoque-mudou') aoMudar()
+  })
+}
+
 export function suportaPush() {
   return (
     typeof window !== 'undefined' &&
