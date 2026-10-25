@@ -7,10 +7,11 @@ import './index.css'
 import { queryClient } from './api/queryClient.js'
 import { AuthProvider } from './contexts/AuthProvider.jsx'
 import { ToastProvider } from './contexts/ToastProvider.jsx'
-import { registrarServiceWorker } from './lib/pwa.js'
+import { ouvirMudancasDeEstoque, registrarServiceWorker } from './lib/pwa.js'
 import { Rotas } from './routes/Rotas.jsx'
 
 registrarServiceWorker()
+ouvirMudancasDeEstoque(() => queryClient.invalidateQueries())
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
