@@ -95,6 +95,55 @@ Abra o endereço do `web` no navegador. Para parar tudo, `Ctrl+C` no terminal.
 
 Se precisar subir só um lado, existem `npm run dev:api` e `npm run dev:web`.
 
+### Testes E2E no navegador
+
+Os E2E usam Playwright, a interface compilada e a API real. O comando inicia um
+**PostgreSQL 17 exclusivo e temporário**, aplica o schema e todas as migrações,
+cria usuários e produtos fictícios e remove a instância ao terminar. Não usa a
+`DATABASE_URL` do `.env`, não acessa o Supabase e não precisa de Docker ou de
+PostgreSQL instalado no sistema. Os binários do banco vêm na dependência de
+desenvolvimento `embedded-postgres`; execute com seu usuário normal, não como root.
+
+```bash
+npm install
+npx playwright install chromium
+npm run test:e2e
+```
+
+No Linux, se faltarem bibliotecas do navegador, use
+`npx playwright install --with-deps chromium`. A instalação dessas bibliotecas
+pode precisar de permissão de administrador.
+
+```bash
+npm run test:e2e -- --project=desktop
+npm run test:e2e -- --project=celular
+npm run test:e2e -- tests/e2e/movimentacoes.spec.js
+npm run test:e2e:ui
+npx playwright show-report
+```
+
+A API dos testes usa a porta **3002** e a interface, **4175**. As portas precisam
+estar livres: o runner não reaproveita servidores de desenvolvimento. A porta
+do PostgreSQL é escolhida automaticamente. Cada teste restaura dados fictícios
+e recebe um contexto de navegador novo; a execução usa um worker para evitar
+disputa pela restauração da base.
+
+O relatório HTML fica em `playwright-report/`, com screenshots de falhas em
+`test-results/`. No CI, a primeira repetição de uma falha também grava um trace;
+é possível solicitar traces localmente com `npm run test:e2e -- --trace on`.
+Esses diretórios, o build em `.cache/e2e-dist/` e dados de execução não entram no Git.
+
+A suíte cobre acesso, permissões, catálogo, cadastros, usuários, movimentações,
+histórico, reposição, relatórios e fluxos da versão móvel. Os testes não enviam
+push nem contatam fornecedores. O perfil celular emula Chromium em 390 × 844;
+não substitui conferir instalação PWA e notificações em um aparelho real.
+
+Os helpers de banco ficam em `scripts/e2e/`: aceitam somente a base local
+`nostock_e2e` e exigem sua marca de identificação para restaurar dados. O runner
+gera a conexão e senhas efêmeras em memória; não é necessário criar outro `.env`.
+O workflow de Pull Request executa os E2E em um job independente e disponibiliza
+o relatório por 7 dias.
+
 ### Não rode a suíte inteira o tempo todo
 
 `npm test` leva de **1 a 3 minutos**, e quase tudo é espera de rede. A suíte dispara 2.471
