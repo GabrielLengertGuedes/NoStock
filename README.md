@@ -95,27 +95,86 @@ Abra o endereço do `web` no navegador. Para parar tudo, `Ctrl+C` no terminal.
 
 Se precisar subir só um lado, existem `npm run dev:api` e `npm run dev:web`.
 
-### Não rode a suíte inteira o tempo todo
+### Testes E2E no navegador
 
-`npm test` leva de **1 a 3 minutos**, e quase tudo é espera de rede. A suíte dispara 2.471
-consultas, e o banco gasta **1,6 s** executando todas elas — o resto do tempo é o pacote indo e
-voltando até a nuvem. Por isso varia tanto com a sua conexão: medimos a mesma suíte em 49 s, 78 s
-e 75 s na mesma máquina. Não é problema de ter teste demais; é a distância até o Supabase.
-Enquanto você programa, rode só o que interessa:
+Os E2E usam Playwright, a interface compilada e a API real. O comando inicia um
+**PostgreSQL 17 exclusivo e temporário**, aplica o schema e todas as migrações,
+cria usuários e produtos fictícios e remove a instância ao terminar. Não usa a
+`DATABASE_URL` do `.env`, não acessa o Supabase e não precisa de Docker ou de
+PostgreSQL instalado no sistema. Os binários do banco vêm na dependência de
+desenvolvimento `embedded-postgres`; execute com seu usuário normal, não como root.
 
-| Quando | Comando | Leva |
-|---|---|---|
-| Mexendo em regra pura, componente, schema | `npm run test:unit` | **~1 s** (nem toca no banco) |
-| Mexendo em um módulo | `npx vitest run tests/integration/categorias.test.js` | **~13 s** |
-| Deixar rodando enquanto edita | `npm run test:watch` | Reexecuta sozinho ao salvar |
-| Antes de abrir a PR | `npm test` | 1–3 min |
+```bash
+npm install
+npx playwright install chromium
+npm run test:e2e
+```
 
-A suíte inteira é responsabilidade da CI, que roda a cada PR sem consumir o seu tempo. Rodar
-tudo a cada `Ctrl+S` é o que faz o teste parecer caro.
+No Linux, se faltarem bibliotecas do navegador, use
+`npx playwright install --with-deps chromium`. A instalação dessas bibliotecas
+pode precisar de permissão de administrador.
 
-**Não existe comando que crie, apague ou recarregue o banco — de propósito.** O banco é um só e
-é compartilhado: um comando desses apagaria o trabalho de cinco pessoas. Mudança na estrutura do
-banco entra como arquivo novo em `db/migrations/`, aplicado à mão e avisado no grupo.
+```bash
+npm run test:e2e -- --project=desktop
+npm run test:e2e -- --project=celular
+npm run test:e2e -- tests/e2e/movimentacoes.spec.js
+npm run test:e2e:ui
+npx playwright show-report
+```
+
+A API dos testes usa a porta **3002** e a interface, **4175**. As portas precisam
+estar livres: o runner não reaproveita servidores de desenvolvimento. A porta
+do PostgreSQL é escolhida automaticamente. Cada teste restaura dados fictícios
+e recebe um contexto de navegador novo; a execução usa um worker para evitar
+disputa pela restauração da base.
+
+O relatório HTML fica em `playwright-report/`, com screenshots de falhas em
+`test-results/`. No CI, a primeira repetição de uma falha também grava um trace;
+é possível solicitar traces localmente com `npm run test:e2e -- --trace on`.
+Esses diretórios, o build em `.cache/e2e-dist/` e dados de execução não entram no Git.
+
+A suíte cobre acesso, permissões, catálogo, cadastros, usuários, movimentações,
+histórico, reposição, relatórios e fluxos da versão móvel. Os testes não enviam
+push nem contatam fornecedores. O perfil celular emula Chromium em 390 × 844;
+não substitui conferir instalação PWA e notificações em um aparelho real.
+
+Os helpers de banco ficam em `scripts/e2e/`: aceitam somente a base local
+`nostock_e2e` e exigem sua marca de identificação para restaurar dados. O runner
+gera a conexão e senhas efêmeras em memória; não é necessário criar outro `.env`.
+O workflow de Pull Request executa os E2E em um job independente e disponibiliza
+o relatório por 7 dias.
+
+### Testes normais com banco isolado
+
+Todos os comandos do Vitest usam um **PostgreSQL 17 temporário**, criado pelo
+`tests/globalSetup.js`, com porta e senha geradas por execução. Isso vale para
+`npm test`, `npm run test:unit`, `npm run test:watch` e `npx vitest run ...`.
+Não é necessário PostgreSQL instalado no sistema, Docker ou outro `.env`.
+
+O setup aplica bootstrap, schema, migrações em ordem e seed de categorias. Antes
+de carregar cada arquivo de teste, substitui a configuração de banco e sessão
+pela configuração temporária e desliga push. A `DATABASE_URL` de desenvolvimento
+é ignorada, mesmo que esteja definida no terminal ou no `.env`. Sem o contexto
+do banco temporário, a execução falha antes de carregar os testes.
+
+O banco usa locale UTF-8 para tratar corretamente maiúsculas e acentos e é
+removido ao terminar, inclusive no modo watch ao encerrar o Vitest. A execução
+no CI usa esse mesmo fluxo, sem um serviço PostgreSQL adicional.
+
+Durante o desenvolvimento, escolha o recorte necessário:
+
+- Suíte normal completa: `npm test`.
+- Só unitários: `npm run test:unit`.
+- Um módulo: `npx vitest run tests/integration/categorias.test.js`.
+- Reexecução ao salvar: `npm run test:watch`.
+
+Os unitários não fazem consultas ao banco, mas a execução também prepara o
+ambiente isolado. O tempo depende da máquina, sem as viagens de rede ao Supabase.
+
+**A preparação e a remoção automáticas se limitam aos bancos temporários dos
+testes.** O banco de desenvolvimento continua compartilhado e não é alterado
+por esses comandos. Mudança na estrutura do sistema entra como arquivo novo em
+`db/migrations/`, aplicado à mão e avisado no grupo.
 
 > **Mexeu na estrutura do banco? A mudança tem que virar migração versionada.**
 > O CI reconstrói um banco do zero a cada Pull Request, aplicando `db/schema.sql` e depois cada
@@ -147,8 +206,8 @@ Cole a chave pública em `VAPID_PUBLIC_KEY`, a privada em `VAPID_PRIVATE_KEY`, e
 - **Para testar no celular**, é preciso HTTPS. Use o endereço publicado ou um túnel HTTPS para a
   porta 5173; pelo IP da rede local o navegador não libera o push.
 - **No iPhone**, o alerta só chega com o app adicionado à Tela de Início (iOS 16.4 ou mais novo).
-- **Os testes nunca mandam alerta de verdade**: o `tests/setup.js` apaga as chaves VAPID, porque o
-  banco de desenvolvimento é compartilhado e pode ter celulares da equipe inscritos.
+- **Os testes nunca mandam alerta de verdade**: usam bancos temporários exclusivos
+  e chaves VAPID vazias, sem inscrições de celulares da equipe.
 
 ---
 
