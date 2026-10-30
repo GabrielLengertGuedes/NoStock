@@ -144,27 +144,37 @@ gera a conexão e senhas efêmeras em memória; não é necessário criar outro 
 O workflow de Pull Request executa os E2E em um job independente e disponibiliza
 o relatório por 7 dias.
 
-### Não rode a suíte inteira o tempo todo
+### Testes normais com banco isolado
 
-`npm test` leva de **1 a 3 minutos**, e quase tudo é espera de rede. A suíte dispara 2.471
-consultas, e o banco gasta **1,6 s** executando todas elas — o resto do tempo é o pacote indo e
-voltando até a nuvem. Por isso varia tanto com a sua conexão: medimos a mesma suíte em 49 s, 78 s
-e 75 s na mesma máquina. Não é problema de ter teste demais; é a distância até o Supabase.
-Enquanto você programa, rode só o que interessa:
+Todos os comandos do Vitest usam um **PostgreSQL 17 temporário**, criado pelo
+`tests/globalSetup.js`, com porta e senha geradas por execução. Isso vale para
+`npm test`, `npm run test:unit`, `npm run test:watch` e `npx vitest run ...`.
+Não é necessário PostgreSQL instalado no sistema, Docker ou outro `.env`.
 
-| Quando | Comando | Leva |
-|---|---|---|
-| Mexendo em regra pura, componente, schema | `npm run test:unit` | **~1 s** (nem toca no banco) |
-| Mexendo em um módulo | `npx vitest run tests/integration/categorias.test.js` | **~13 s** |
-| Deixar rodando enquanto edita | `npm run test:watch` | Reexecuta sozinho ao salvar |
-| Antes de abrir a PR | `npm test` | 1–3 min |
+O setup aplica bootstrap, schema, migrações em ordem e seed de categorias. Antes
+de carregar cada arquivo de teste, substitui a configuração de banco e sessão
+pela configuração temporária e desliga push. A `DATABASE_URL` de desenvolvimento
+é ignorada, mesmo que esteja definida no terminal ou no `.env`. Sem o contexto
+do banco temporário, a execução falha antes de carregar os testes.
 
-A suíte inteira é responsabilidade da CI, que roda a cada PR sem consumir o seu tempo. Rodar
-tudo a cada `Ctrl+S` é o que faz o teste parecer caro.
+O banco usa locale UTF-8 para tratar corretamente maiúsculas e acentos e é
+removido ao terminar, inclusive no modo watch ao encerrar o Vitest. A execução
+no CI usa esse mesmo fluxo, sem um serviço PostgreSQL adicional.
 
-**Não existe comando que crie, apague ou recarregue o banco — de propósito.** O banco é um só e
-é compartilhado: um comando desses apagaria o trabalho de cinco pessoas. Mudança na estrutura do
-banco entra como arquivo novo em `db/migrations/`, aplicado à mão e avisado no grupo.
+Durante o desenvolvimento, escolha o recorte necessário:
+
+- Suíte normal completa: `npm test`.
+- Só unitários: `npm run test:unit`.
+- Um módulo: `npx vitest run tests/integration/categorias.test.js`.
+- Reexecução ao salvar: `npm run test:watch`.
+
+Os unitários não fazem consultas ao banco, mas a execução também prepara o
+ambiente isolado. O tempo depende da máquina, sem as viagens de rede ao Supabase.
+
+**A preparação e a remoção automáticas se limitam aos bancos temporários dos
+testes.** O banco de desenvolvimento continua compartilhado e não é alterado
+por esses comandos. Mudança na estrutura do sistema entra como arquivo novo em
+`db/migrations/`, aplicado à mão e avisado no grupo.
 
 > **Mexeu na estrutura do banco? A mudança tem que virar migração versionada.**
 > O CI reconstrói um banco do zero a cada Pull Request, aplicando `db/schema.sql` e depois cada
@@ -196,8 +206,8 @@ Cole a chave pública em `VAPID_PUBLIC_KEY`, a privada em `VAPID_PRIVATE_KEY`, e
 - **Para testar no celular**, é preciso HTTPS. Use o endereço publicado ou um túnel HTTPS para a
   porta 5173; pelo IP da rede local o navegador não libera o push.
 - **No iPhone**, o alerta só chega com o app adicionado à Tela de Início (iOS 16.4 ou mais novo).
-- **Os testes nunca mandam alerta de verdade**: o `tests/setup.js` apaga as chaves VAPID, porque o
-  banco de desenvolvimento é compartilhado e pode ter celulares da equipe inscritos.
+- **Os testes nunca mandam alerta de verdade**: usam bancos temporários exclusivos
+  e chaves VAPID vazias, sem inscrições de celulares da equipe.
 
 ---
 

@@ -1,13 +1,9 @@
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { mkdtemp, rm } from 'node:fs/promises'
-import { createServer } from 'node:net'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import EmbeddedPostgres from 'embedded-postgres'
 
 import { prepararBancoE2E } from './database.js'
+import { iniciarBancoTemporario } from '../tests/postgres.js'
 
 process.chdir(fileURLToPath(new URL('../../', import.meta.url)))
 
@@ -26,34 +22,12 @@ function executar(arquivo, argumentos, env) {
   })
 }
 
-async function portaLivre() {
-  const servidor = createServer()
-  await new Promise((resolve, reject) => {
-    servidor.once('error', reject)
-    servidor.listen(0, '127.0.0.1', resolve)
-  })
-  const porta = servidor.address().port
-  await new Promise((resolve) => servidor.close(resolve))
-  return porta
-}
-
-const diretorio = await mkdtemp(join(tmpdir(), 'nostock-e2e-'))
-const porta = await portaLivre()
-const senha = randomBytes(24).toString('hex')
-const postgres = new EmbeddedPostgres({
-  databaseDir: join(diretorio, 'postgres'), user: 'postgres', password: senha,
-  port: porta, persistent: false, createPostgresUser: false,
-  initdbFlags: ['--locale=C', '--encoding=UTF8'],
-  postgresFlags: ['-h', '127.0.0.1'],
-  onLog: () => {}, onError: () => {},
-})
+let banco
 
 try {
   console.log('E2E: iniciando PostgreSQL 17 temporário e exclusivo.')
-  await postgres.initialise()
-  await postgres.start()
-  await postgres.createDatabase('nostock_e2e')
-  process.env.E2E_DATABASE_URL = `postgresql://postgres:${senha}@127.0.0.1:${porta}/nostock_e2e`
+  banco = await iniciarBancoTemporario('nostock_e2e')
+  process.env.E2E_DATABASE_URL = banco.url
   await prepararBancoE2E()
   const env = {
     ...process.env, DATABASE_URL: process.env.E2E_DATABASE_URL, DATABASE_CA_CERT: '',
@@ -65,12 +39,13 @@ try {
   process.exitCode = build || await executar('node_modules/@playwright/test/cli.js', ['test', ...process.argv.slice(2)], env)
 } catch (erro) {
   // Erros de conexão podem conter a URL; as credenciais efêmeras também não vão para logs.
-  console.error('E2E:', String(erro?.message ?? 'Falha ao iniciar o ambiente de testes').split(senha).join('[oculto]'))
+  const senha = banco ? new URL(banco.url).password : ''
+  const mensagem = String(erro?.message ?? 'Falha ao iniciar o ambiente de testes')
+  console.error('E2E:', senha ? mensagem.split(senha).join('[oculto]') : mensagem)
   process.exitCode = 1
 } finally {
   try {
-    await postgres.stop()
-    await rm(diretorio, { recursive: true, force: true })
+    if (banco) await banco.encerrar()
     console.log('E2E: instância temporária encerrada e removida.')
   } catch {
     console.error('E2E: não foi possível concluir a limpeza da instância temporária.')
