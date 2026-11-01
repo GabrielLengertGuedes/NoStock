@@ -1,0 +1,30 @@
+import { test, expect, abrirAcao } from './fixtures.js'
+
+test('sugestão agrupa fornecedor e deixa de listar produto reposto', async ({ page, entrar, dados }) => {
+  await entrar('gestor', '/reposicao')
+  await expect(page.getByRole('heading', { name: dados.fornecedor.nome })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sem fornecedor definido' })).toBeVisible()
+  await expect(page.getByRole('row').filter({ hasText: dados.produtos.critico.nome })).toContainText('18 un.')
+  await page.getByRole('tab', { name: 'Sem estoque', exact: true }).click()
+  await expect(page.getByRole('row').filter({ hasText: dados.produtos.critico.nome })).toHaveCount(0)
+  await expect(page.getByRole('row').filter({ hasText: dados.produtos.zerado.nome })).toBeVisible()
+  await page.goto('/produtos')
+  await abrirAcao(page, dados.produtos.critico.nome, 'Registrar entrada')
+  const dialogo = page.getByRole('dialog')
+  await dialogo.getByLabel(/^Quantidade(?:\s*\*)?$/).fill('19')
+  await dialogo.getByRole('button', { name: 'Registrar', exact: true }).click()
+  await expect(dialogo).toContainText('Movimentação registrada com sucesso.')
+  await page.goto('/reposicao')
+  await expect(page.getByRole('row').filter({ hasText: dados.produtos.critico.nome })).toHaveCount(0)
+  await expect(page.getByRole('row').filter({ hasText: dados.produtos.zerado.nome })).toBeVisible()
+})
+
+test('sino abre os produtos em atenção com filtro aplicado', async ({ page, entrar, dados }) => {
+  await entrar('gestor', '/dashboard')
+  await page.getByRole('button', { name: /Alertas de estoque:/ }).click()
+  const alertas = page.getByRole('region', { name: 'Alertas de estoque' })
+  await expect(alertas).toContainText(dados.produtos.zerado.nome)
+  await alertas.getByRole('link', { name: 'Ver todos os alertas' }).click()
+  await expect(page).toHaveURL(/status=PRECISA_REPOR/)
+  await expect(page.getByRole('row').filter({ hasText: dados.produtos.normal.nome })).toHaveCount(0)
+})

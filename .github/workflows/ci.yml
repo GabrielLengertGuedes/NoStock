@@ -8,26 +8,6 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    # O banco roda dentro do próprio runner. A suíte dispara 2.471 consultas e o
-    # banco gasta 1,6 s executando todas — o resto do tempo do CI era o pacote
-    # indo e voltando até o Supabase. Aqui a ida e volta é local.
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: nostock
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-        ports:
-          - 5432:5432
-
-    env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/nostock
-
     steps:
       - uses: actions/checkout@v4
       # Mesma versao da imagem de producao (Dockerfile: node:22-slim).
@@ -46,24 +26,35 @@ jobs:
       - name: Build do front
         run: npm run build
 
-      # Reconstrói o banco na mesma ordem em que o Supabase foi construído:
-      # schema.sql (que nunca é editado) e depois cada migração, em ordem.
-      # É isso que mantém o banco do CI igual ao de produção — mudança aplicada
-      # no Supabase que não vira migração versionada faz os dois divergirem.
-      # O bootstrap cria só o que o Supabase já oferece de fábrica.
-      - name: Preparar o banco do CI
-        run: |
-          shopt -s nullglob
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f db/ci-bootstrap.sql
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f db/schema.sql
-
-          for migracao in db/migrations/*.sql; do
-            echo "aplicando $migracao"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$migracao"
-          done
-
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f db/seed.sql
-          psql "$DATABASE_URL" -c "select count(*) as categorias_base from public.categorias"
-
+      # O globalSetup do Vitest prepara e remove o PostgreSQL 17 temporário,
+      # com bootstrap, schema, migrações e seed, como na execução local.
       - name: Run tests
         run: npm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+      - name: Instalar dependências
+        run: npm ci
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Conferir proteção do banco de testes
+        run: npx vitest run tests/unit/e2eDatabase.test.js
+      - name: Executar E2E com PostgreSQL 17 temporário
+        run: npm run test:e2e
+      - name: Publicar evidências E2E
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-e2e
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore

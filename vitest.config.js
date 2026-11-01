@@ -6,9 +6,10 @@ export default defineConfig({
   esbuild: { jsx: 'automatic' },
   test: {
     include: ['tests/**/*.test.js'],
+    globalSetup: ['tests/globalSetup.js'],
     setupFiles: ['tests/setup.js'],
     environment: 'node',
-    // O banco e um so: arquivos em paralelo disputariam a mesma transacao.
+    // Os arquivos compartilham a base temporária exclusiva desta execução.
     fileParallelism: false,
     testTimeout: 20_000,
     hookTimeout: 20_000,

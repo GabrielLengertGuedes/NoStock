@@ -25,6 +25,8 @@ db/backups/
 
 # Testes e cobertura
 coverage/
+playwright-report/
+test-results/
 .nyc_output/
 *.lcov
 
