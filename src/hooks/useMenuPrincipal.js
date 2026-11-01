@@ -1,4 +1,5 @@
 import {
+  IconeAjuda,
   IconeCategorias,
   IconeDashboard,
   IconeFornecedores,
@@ -26,5 +27,6 @@ export function useMenuPrincipal() {
     itens.push({ para: '/reposicao', rotulo: 'Sugestão de compra', Icone: IconeReposicao })
     itens.push({ para: '/usuarios', rotulo: 'Usuários', Icone: IconeUsuarios })
   }
+  itens.push({ para: '/ajuda', rotulo: 'Como usar', Icone: IconeAjuda })
   return itens
 }
