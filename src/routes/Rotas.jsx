@@ -4,6 +4,7 @@ import { EstadoVazio } from '../components/EstadoVazio.jsx'
 import { Layout } from '../components/Layout.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useMenuPrincipal } from '../hooks/useMenuPrincipal.js'
+import { Ajuda } from '../pages/Ajuda.jsx'
 import { Categorias } from '../pages/Categorias.jsx'
 import { Dashboard } from '../pages/Dashboard.jsx'
 import { Fornecedores } from '../pages/Fornecedores.jsx'
@@ -130,6 +131,14 @@ export function Rotas() {
           element={
             <RotaProtegida papel="GESTOR">
               <Usuarios />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/ajuda"
+          element={
+            <RotaProtegida>
+              <Ajuda />
             </RotaProtegida>
           }
         />

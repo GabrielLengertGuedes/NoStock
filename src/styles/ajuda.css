@@ -1,0 +1,329 @@
+/* Ajuda ("Como usar"): /ajuda na versão completa e /m/ajuda no celular. */
+
+/* ── versão completa */
+
+.ajuda-grade {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--spacing-xl);
+  align-items: start;
+}
+
+.ajuda-indice {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--spacing-base));
+  max-height: calc(100vh - var(--topbar-height) - var(--spacing-xl));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding-right: var(--spacing-sm);
+}
+
+.ajuda-indice ul {
+  list-style: none;
+  margin-top: var(--spacing-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ajuda-indice a {
+  display: block;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--slate);
+  font-size: 13.5px;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.ajuda-indice a:hover,
+.ajuda-indice a:focus-visible {
+  background: var(--accent-pale);
+  color: var(--primary-medium);
+}
+
+/* Seção que está sendo lida à direita. Sem mudar o peso da fonte: negrito é
+   mais largo, e o título comprido quebraria a linha a cada troca, fazendo o
+   índice pular enquanto se rola. Fundo, cor e barra não mexem no tamanho. */
+.ajuda-indice a[aria-current='location'] {
+  background: var(--accent-light);
+  color: var(--primary-deep);
+  box-shadow: inset 3px 0 0 var(--primary-medium);
+}
+
+.ajuda-rotulo {
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+
+.ajuda-conteudo {
+  max-width: 880px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.ajuda-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-base);
+}
+
+.ajuda-grupo-titulo {
+  font: 750 20px var(--font-display);
+  color: var(--dark);
+  letter-spacing: -0.01em;
+}
+
+.ajuda-secao {
+  /* A topbar é sticky: sem isso, o link do índice esconde o título embaixo dela. */
+  scroll-margin-top: calc(var(--topbar-height) + var(--spacing-base));
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* .painel + .painel já dá a margem; aqui o gap do grupo cuida disso. */
+.ajuda-grupo .painel + .painel {
+  margin-top: 0;
+}
+
+.ajuda-secao-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.ajuda-so-gestor {
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+
+.ajuda-caminho {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-medium);
+}
+
+.ajuda-passos {
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  color: var(--dark);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.ajuda-passos li::marker {
+  color: var(--gray);
+  font-weight: 600;
+}
+
+.ajuda-nota {
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--sand);
+  color: var(--slate);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ajuda-tabela-rolagem {
+  overflow-x: auto;
+}
+
+.ajuda-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.ajuda-tabela caption {
+  text-align: left;
+  font-weight: 700;
+  color: var(--dark);
+  padding-bottom: var(--spacing-sm);
+}
+
+.ajuda-tabela th,
+.ajuda-tabela td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--stone);
+  vertical-align: top;
+}
+
+.ajuda-tabela thead th {
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+
+.ajuda-tabela tbody th {
+  white-space: nowrap;
+  color: var(--dark);
+}
+
+.ajuda-tabela td {
+  color: var(--slate);
+}
+
+.ajuda-perguntas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.ajuda-perguntas dt {
+  font-weight: 700;
+  color: var(--dark);
+  font-size: 15px;
+}
+
+.ajuda-perguntas dd {
+  color: var(--slate);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ajuda-figuras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-base);
+  margin-top: var(--spacing-xs);
+}
+
+.ajuda-figura {
+  flex: 1 1 100%;
+  /* Sem isso o item flex não encolhe abaixo da largura do print e estoura a tela. */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ajuda-figura-celular {
+  flex: 0 1 220px;
+}
+
+.ajuda-figura a {
+  display: block;
+  border: 1px solid var(--stone);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--sand);
+}
+
+.ajuda-figura a:focus-visible {
+  outline: 2px solid var(--primary-medium);
+  outline-offset: 2px;
+}
+
+.ajuda-figura img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ajuda-figura figcaption {
+  font-size: 12.5px;
+  color: var(--gray);
+}
+
+@media (max-width: 1100px) {
+  .ajuda-grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Sem coluna lateral, o índice vira um sumário no topo. */
+  .ajuda-indice {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--spacing-base);
+    padding: var(--spacing-base);
+    background: var(--white);
+    border: 1px solid var(--stone);
+    border-radius: 16px;
+  }
+}
+
+/* ── celular */
+
+.ajuda-movel-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ajuda-movel-item > summary {
+  list-style: none;
+}
+
+.ajuda-movel-item > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ajuda-movel-item > summary::after {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--gray);
+  border-bottom: 2px solid var(--gray);
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.15s ease;
+}
+
+.ajuda-movel-item[open] > summary::after {
+  transform: rotate(-135deg) translateY(-2px);
+}
+
+.ajuda-movel-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 14px 16px;
+}
+
+.ajuda-movel-corpo .ajuda-passos {
+  font-size: 14.5px;
+}
+
+.ajuda-movel-corpo .ajuda-figura-celular {
+  flex: 1 1 calc(50% - 8px);
+  max-width: 220px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ajuda-movel-item > summary::after {
+    transition: none;
+  }
+}
+
+@media print {
+  .ajuda-indice {
+    display: none;
+  }
+
+  .ajuda-grade {
+    display: block;
+  }
+
+  .ajuda-secao {
+    break-inside: avoid;
+  }
+}

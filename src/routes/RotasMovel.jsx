@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import '../styles/movel.css'
 import { RegistroMovelProvider } from '../components/movel/RegistroMovelProvider.jsx'
 import { useAtualizarAoVoltar } from '../hooks/useAtualizarAoVoltar.js'
+import { AjudaMovel } from '../pages/movel/AjudaMovel.jsx'
 import { ContaMovel } from '../pages/movel/ContaMovel.jsx'
 import { EstoqueMovel } from '../pages/movel/EstoqueMovel.jsx'
 import { HistoricoMovel } from '../pages/movel/HistoricoMovel.jsx'
@@ -27,6 +28,7 @@ export function RotasMovel() {
         <Route path="historico" element={<HistoricoMovel />} />
         <Route path="repor" element={<ReporMovel />} />
         <Route path="conta" element={<ContaMovel />} />
+        <Route path="ajuda" element={<AjudaMovel />} />
         <Route path="*" element={<Navigate to="/m" replace />} />
       </Routes>
     </RegistroMovelProvider>
