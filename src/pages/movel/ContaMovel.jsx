@@ -151,6 +151,9 @@ export function ContaMovel() {
       <Alertas alertas={alertas} />
 
       <div className="movel-opcoes">
+        <Link to="/m/ajuda" className="movel-opcao movel-opcao-link">
+          Como usar
+        </Link>
         <Link to="/dashboard" className="movel-opcao movel-opcao-link">
           Abrir versão completa
           <IconeExterno size={16} />
